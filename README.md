@@ -5,7 +5,12 @@ Note: Code coming soon, I'm just working on the parallelization, and some exampl
 `noCRUD` (short for “Not Only CRUD”) is a test runner + backend flow simulator designed to:
 
 - ✅ Run standard **CRUD checks** on API endpoints
-- 🚦 Simulate **full user workflows**, such as login, approvals, and nested object creation
+- 🚦 Simulate **full workflows**
+   - And this is multi user!! So you can create multiple API Clients with different user creds, and then do something like:    
+        - POST as user A ->
+        - GET as user B (expect fail) ->
+        - PUT as user A (update perms so other users can read) ->
+        - GET as user C (Expect success)   
 - 🔍 Verify **business logic and rule enforcement**, including invalid flows and expected failures
 - 📦 Reuse `create()` flows to **seed the database** with dependency-aware objects
 - 🧪 Reduce repetitive UI testing by interacting with the backend directly
@@ -40,7 +45,7 @@ Rather than loading raw fixtures, `noCRUD` lets you:
 ### 🧪 Example Use Cases
 
 - Validate all CRUD endpoints after a schema change
-- Simulate a full mission approval workflow
+- Simulate a full multi-user workflow.
 - Seed a dev or staging DB with real object graphs
 - Debug a failing frontend flow by replicating it in CLI
 - Confirm that rule violations (e.g., missing dependencies) fail as expected
