@@ -28,12 +28,12 @@ Note: Code coming soon, I'm just working on the parallelization, and some exampl
 
 ### 🔁 Reusable Object Builders
 
-Need to create a `TestPlan` but it depends on a `Program`, `Phase`, and `Discipline`?
+Need to create a `Trip` but it depends on a `Driver`, `Passenger`, and `Vehicle`?
 
 Rather than loading raw fixtures, `noCRUD` lets you:
 - Reuse object builders that encapsulate dependency logic
 - Avoid hardcoding IDs or managing inconsistent test data
-- Seed a DB programmatically with fully valid objects
+- Seed a DB programmatically with fully valid objects (using the actual API! (but also a backdoor DBClient if you wish to))
 
 ---
 
