@@ -1,4 +1,4 @@
-Note: Code coming soon, I'm just working on the parallelization, and some examples
+
 
 ## 🔧 noCRUD — A CLI Tool for Simulating Real-World API Workflows
 
@@ -56,3 +56,23 @@ Rather than loading raw fixtures, `noCRUD` lets you:
 
 > This isn’t just a test runner.  
 > It’s a developer’s toolbox for interacting with your backend in the same way your **users** and **frontend** do — just without the mouse.
+
+### Architecture of any Test Runner
+I've added this section so that `noCRUD.py` will make sense to people who havent written test runners before  
+1. Get the set of tests to be run
+2. Run tests and collect results
+3. Print results 
+
+Steps 2 & 3 are not completely mutually exclusive... I like to print a few specific things while running the test and then just print a summary at the end. It's also completely up to you to decide what to bubble up to the results.
+
+
+### Status
+20250415 - There are a few example flows... but they dont really work, there is stuff not implemented, I'm just scaffolding. (Don't want this to seem fragile though... I use this runner extensively in personal projects, but I dont want to put any of that code here, so thats why I'm creating the example-app and example runner) 
+
+### Work In Progress
+- Building out example app and example runner to show how it's actually used
+- Next Up: Parallelize (see POC for approach)
+   - We may rethink some of the console printing... (since flows will be running in parallel)
+
+### Other Potential Improvements
+- Build a real UI layer??, maybe just an export of a json that is fed to a modern reactive app?? 
