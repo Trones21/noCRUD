@@ -6,13 +6,12 @@ from typing import Dict, Callable
 import time
 import traceback
 import requests
-from flows import (
-    example_api_client,
-    example_biz_logic
-)
-from flows.crud import (
-    films
-)
+import io
+from contextlib import redirect_stdout
+from multiprocessing import Pool
+from flows import example_api_client, example_biz_logic
+from flows.crud import films
+from python.utils.provisioning import provision_env_for_flow
 from utils.db_client import DBClient
 from utils.printing import format_crud_print, print_group_separator, print_warn
 from utils.decorators import with_stack_trace
@@ -22,7 +21,7 @@ from utils.decorators import with_stack_trace
 # Dictionary of request flows
 REQUEST_FLOWS = {
     "example_api_client": example_api_client.exec,
-    "example_biz_logic": example_biz_logic.exec
+    "example_biz_logic": example_biz_logic.exec,
 }
 
 # Dictionary of crud flows - should not be multi-user or multi endpoint (except creating prerequisite objects)
@@ -118,36 +117,81 @@ def main():
     print(f"\nTest runner took: {end_time - start_time:.6f} seconds")
 
 
-def crud_flows_runner(flowsToRun, allFlows):
-    """Run Flows with output that expects CRUD hashmap returned from each flow"""
-    crud_results = {}
-    for flow_name in flowsToRun:
-        flow_function = allFlows[flow_name]
-        try:
+def run_isolated_flow(flow_name_and_func):
+    flow_name, flow_function = flow_name_and_func
+
+    provision_env_for_flow(flow_name)
+
+    buffer = io.StringIO()
+    try:
+        with redirect_stdout(buffer):
             print(f"Running flow: {flow_name}\n{'-' * 60}")
             res = flow_function()
             formatted = format_crud_print(res)
             print("\n")
             print(formatted)
             print("\n")
-            crud_results[flow_name] = formatted
-        except requests.exceptions.ConnectionError:
-            print(
-                f"\nFlow '{flow_name}' failed: Unable to connect to the backend. Is it running? \n"
-            )
-        except Exception as e:
-            crud_results[flow_name] = f"Fail: {e}"
-            print(f"\nFlow '{flow_name}' failed with error: {e} \n")
-            print("Stack trace:")
-            print(traceback.format_exc())
+        return flow_name, formatted, buffer.getvalue()
+    except requests.exceptions.ConnectionError:
+        msg = (
+            f"\nFlow '{flow_name}' failed: Unable to connect to the backend. "
+            f"Is it running?\n"
+        )
+        return flow_name, msg.strip(), buffer.getvalue() + msg
+    except Exception as e:
+        tb = traceback.format_exc()
+        err = f"\nFlow '{flow_name}' failed with error: {e}\nStack trace:\n{tb}"
+        return flow_name, f"Fail: {e}", buffer.getvalue() + err
+
+
+def crud_flows_runner(flowsToRun, allFlows, parallel=True):
+    """Run Flows with output that expects CRUD hashmap returned from each flow"""
+
+    # Pair flow names with functions so we can parallelize
+    flow_items = [(name, allFlows[name]) for name in flowsToRun]
+
+    if parallel:
+        with Pool() as pool:
+            results = pool.map(run_isolated_flow, flow_items)
+    else:
+        results = crud_flows_runner_serial(flowsToRun, allFlows)
+
+    # Output and summary collection
+    crud_results = {}
+    for flow_name, formatted_result, captured_output in results:
+        print(captured_output)
+        crud_results[flow_name] = formatted_result
 
     # Print test case Results
     print_group_separator("Results Summary")
-    # Determine the max length for entity names to align columns properly
     max_length = max(len(k) for k in crud_results.keys())
-
     for k, v in crud_results.items():
         print(f"{k.ljust(max_length)}: {v}")
+
+
+def crud_flows_runner_serial(flowsToRun, allFlows):
+    """Run Flows with output that expects CRUD results returned from each flow"""
+    results = []
+    for flow_name in flowsToRun:
+        flow_function = allFlows[flow_name]
+        buffer = io.StringIO()
+        try:
+            with redirect_stdout(buffer):
+                print(f"Running flow: {flow_name}\n{'-' * 60}")
+                res = flow_function()
+                formatted = format_crud_print(res)
+                print("\n")
+                print(formatted)
+                print("\n")
+            results.append((flow_name, formatted, buffer.getvalue()))
+        except requests.exceptions.ConnectionError:
+            msg = f"\nFlow '{flow_name}' failed: Unable to connect to the backend. Is it running?\n"
+            results.append((flow_name, msg.strip(), buffer.getvalue() + msg))
+        except Exception as e:
+            tb = traceback.format_exc()
+            err = f"\nFlow '{flow_name}' failed with error: {e}\nStack trace:\n{tb}"
+            results.append((flow_name, f"Fail: {e}", buffer.getvalue() + err))
+    return results
 
 
 def request_flows_runner(flowstoRun, allFlows):
@@ -202,7 +246,9 @@ def collect_flows_by_folder(relativePath: str) -> Dict[str, Callable]:
                         flows[name] = obj
 
     if len(flows) == 0:
-        print_warn(f"Automatic registration: ${folderToScan} found, but no functions ending in _flow found. COLLECTED_FLOWS will be empty")
+        print_warn(
+            f"Automatic registration: ${folderToScan} found, but no functions ending in _flow found. COLLECTED_FLOWS will be empty"
+        )
     return flows
 
 

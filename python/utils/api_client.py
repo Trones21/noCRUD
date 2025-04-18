@@ -2,16 +2,17 @@ import requests
 from utils.fixtures import get_fixture
 from utils.decorators import with_perf, with_stack_trace
 import json
+import os
 
 # Base API URL
-BASE_URL = "http://localhost:8000/api"
+BASE_URL = f"http://localhost:{os.getenv('APP_PORT')}/api"
 
 
 def login(username, password):
     """Log in a user and return their token."""
     headers = {"Content-Type": "application/json"}
     response = requests.post(
-        "http://localhost:8000/api/login/",
+        f"http://localhost:{os.getenv('APP_PORT')}/api/login/",
         json={"username": username, "password": "demo"},
         headers=headers,
     )
@@ -37,7 +38,7 @@ class APIClient:
         """Log in a user and set cookies and X-CSRFToken"""
         headers = {"Content-Type": "application/json"}
         response = self.session.post(
-            "http://localhost:8000/api/login/",
+            f"http://localhost:{os.getenv('APP_PORT')}/api/login/",
             json={"username": username, "password": password},
             headers=headers,
         )

@@ -4,14 +4,49 @@ from psycopg import sql
 from typing import Optional
 from utils.fixtures import addFixtures
 import sys
+import os
 
 
 class DBClient:
     def __init__(self):
+        self.dbname = os.getenv("POSTGRES_DB_NAME", "postgres")
+        self.user = os.getenv("POSTGRES_USER", "postgres")
+        self.pw = os.getenv("POSTGRES_PASSWORD", "postgres")
+        self.host = os.getenv("POSTGRES_HOST", "localhost")
+        self.port = os.getenv("POSTGRES_PORT", "5432")
+
+        # Connect to the default DB to run CREATE DATABASE
         self.conn = psycopg.connect(
-            "dbname=postgres user=postgres password=postgres host=localhost port=5432"
+            dbname=self.dbname,
+            user=self.user,
+            password=self.pw,
+            host=self.host,
+            port=self.port,
         )
-        return
+        self.conn.autocommit = True  # Required for CREATE DATABASE
+        self.cur = self.conn.cursor()
+
+    def createDB(self, db_name):
+        try:
+            self.cur.execute(
+                sql.SQL("CREATE DATABASE {}").format(sql.Identifier(db_name))
+            )
+            print(f"✅ Database '{db_name}' created.")
+        except psycopg.errors.DuplicateDatabase:
+            print(f"⚠️ Database '{db_name}' already exists.")
+        except Exception as e:
+            print(f"❌ Failed to create database '{db_name}': {e}")
+            raise
+
+    def dropDB(self, db_name):
+        try:
+            self.cur.execute(
+                sql.SQL("DROP DATABASE IF EXISTS {}").format(sql.Identifier(db_name))
+            )
+            print(f"🗑️  Database '{db_name}' dropped.")
+        except Exception as e:
+            print(f"❌ Failed to drop database '{db_name}': {e}")
+            raise
 
     def clearTable(self, table):
         with self.conn.cursor() as cur:
