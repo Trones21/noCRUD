@@ -1,0 +1,13 @@
+[
+  {
+    "model": "app.episode",
+    "pk": 1,
+    "fields": {
+      "production": 1,
+      "season": 1,
+      "episode_number": 1,
+      "title": "Pilot",
+      "summary": "The beginning of Heisenberg."
+    }
+  }
+]

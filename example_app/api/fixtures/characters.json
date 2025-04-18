@@ -1,0 +1,22 @@
+[
+  {
+    "model": "app.character",
+    "pk": 1,
+    "fields": {
+      "name": "Walter White",
+      "actor": "Bryan Cranston",
+      "description": "",
+      "production": 1
+    }
+  },
+  {
+    "model": "app.character",
+    "pk": 2,
+    "fields": {
+      "name": "River Tam",
+      "actor": "Summer Glau",
+      "description": "",
+      "production": 2
+    }
+  }
+]

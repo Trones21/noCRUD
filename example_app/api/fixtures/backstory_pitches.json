@@ -1,0 +1,24 @@
+[
+  {
+    "model": "app.backstorypitch",
+    "pk": 1,
+    "fields": {
+      "character": 1,
+      "user": 1,
+      "pitch_text": "Explore Walt's early teaching years.",
+      "upvotes": 12,
+      "visibility": "public"
+    }
+  },
+  {
+    "model": "app.backstorypitch",
+    "pk": 2,
+    "fields": {
+      "character": 2,
+      "user": 1,
+      "pitch_text": "River's time in the academy.",
+      "upvotes": 8,
+      "visibility": "public"
+    }
+  }
+]

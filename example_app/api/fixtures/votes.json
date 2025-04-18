@@ -1,0 +1,20 @@
+[
+  {
+    "model": "app.vote",
+    "pk": 1,
+    "fields": {
+      "pitch": 1,
+      "user": 1,
+      "value": 1
+    }
+  },
+  {
+    "model": "app.vote",
+    "pk": 2,
+    "fields": {
+      "pitch": 2,
+      "user": 1,
+      "value": 1
+    }
+  }
+]

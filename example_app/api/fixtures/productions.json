@@ -1,0 +1,26 @@
+[
+  {
+    "model": "app.production",
+    "pk": 1,
+    "fields": {
+      "title": "Breaking Bad",
+      "year": 2008,
+      "type": "show",
+      "image": "",
+      "description": "High school chemistry teacher turns to crime.",
+      "universe": 1
+    }
+  },
+  {
+    "model": "app.production",
+    "pk": 2,
+    "fields": {
+      "title": "Serenity",
+      "year": 2005,
+      "type": "film",
+      "image": "",
+      "description": "Continuation of Firefly.",
+      "universe": 2
+    }
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "model": "app.universe",
+    "pk": 1,
+    "fields": {
+      "name": "Breaking Bad Universe",
+      "description": "Includes Breaking Bad, Better Call Saul, etc."
+    }
+  },
+  {
+    "model": "app.universe",
+    "pk": 2,
+    "fields": {
+      "name": "Firefly Universe",
+      "description": "Space western setting."
+    }
+  }
+]

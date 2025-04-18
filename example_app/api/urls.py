@@ -8,6 +8,13 @@ from django.views.decorators.http import require_http_methods
 from api.models.users import UsersViewSet
 from api.models.user_role import UserRoleViewSet
 from api.models.roles import RolesViewSet
+from example_app.api.models.actor import ActorViewSet
+from example_app.api.models.backstory_pitch import BackstoryPitch
+from example_app.api.models.character import CharacterViewSet
+from example_app.api.models.production import ProductionViewSet
+from example_app.api.models.tags_and_tagcategories import TagCategoryViewSet, TagViewSet
+from example_app.api.models.universe import UniverseViewSet
+from example_app.api.models.vote import VoteViewSet
 
 from .views import login_view, get_model_shape
 from example_app.storage import get_file_view
@@ -29,7 +36,14 @@ router = SimpleRouter()
 router.register(r"users", UsersViewSet)
 router.register(r"users_roles", UserRoleViewSet)
 router.register(r"roles", RolesViewSet)
-
+router.register(r"pitch", BackstoryPitch)
+router.register(r"universe", UniverseViewSet)
+router.register(r"production", ProductionViewSet)
+router.register(r"actor", ActorViewSet)
+router.register(r"character", CharacterViewSet)
+router.register(r"vote", VoteViewSet)
+router.register(r"tagcategory", TagCategoryViewSet)
+router.register(r"tag", TagViewSet)
 
 urlpatterns = [
     path("", index, name="index"),

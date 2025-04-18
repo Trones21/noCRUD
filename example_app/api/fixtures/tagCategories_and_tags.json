@@ -1,0 +1,269 @@
+[
+  {
+    "model": "example_app.tagcategory",
+    "pk": 1,
+    "fields": {
+      "name": "Life Stage"
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 1,
+    "fields": {
+      "name": "childhood",
+      "category": 1
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 2,
+    "fields": {
+      "name": "teen years",
+      "category": 1
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 3,
+    "fields": {
+      "name": "young adult",
+      "category": 1
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 4,
+    "fields": {
+      "name": "midlife",
+      "category": 1
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 5,
+    "fields": {
+      "name": "old age",
+      "category": 1
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 6,
+    "fields": {
+      "name": "full timeline",
+      "category": 1
+    }
+  },
+  {
+    "model": "example_app.tagcategory",
+    "pk": 2,
+    "fields": {
+      "name": "Relationship Dynamics"
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 7,
+    "fields": {
+      "name": "mentor relationship",
+      "category": 2
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 8,
+    "fields": {
+      "name": "family tension",
+      "category": 2
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 9,
+    "fields": {
+      "name": "romantic subplot",
+      "category": 2
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 10,
+    "fields": {
+      "name": "rivalry",
+      "category": 2
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 11,
+    "fields": {
+      "name": "betrayal",
+      "category": 2
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 12,
+    "fields": {
+      "name": "found family",
+      "category": 2
+    }
+  },
+  {
+    "model": "example_app.tagcategory",
+    "pk": 3,
+    "fields": {
+      "name": "Psychological Themes"
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 13,
+    "fields": {
+      "name": "trauma",
+      "category": 3
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 14,
+    "fields": {
+      "name": "revenge",
+      "category": 3
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 15,
+    "fields": {
+      "name": "redemption",
+      "category": 3
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 16,
+    "fields": {
+      "name": "obsession",
+      "category": 3
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 17,
+    "fields": {
+      "name": "guilt",
+      "category": 3
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 18,
+    "fields": {
+      "name": "addiction",
+      "category": 3
+    }
+  },
+  {
+    "model": "example_app.tagcategory",
+    "pk": 4,
+    "fields": {
+      "name": "Story Arcs / Settings"
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 19,
+    "fields": {
+      "name": "cartel arc",
+      "category": 4
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 20,
+    "fields": {
+      "name": "war flashback",
+      "category": 4
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 21,
+    "fields": {
+      "name": "undercover mission",
+      "category": 4
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 22,
+    "fields": {
+      "name": "prison time",
+      "category": 4
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 23,
+    "fields": {
+      "name": "political rise",
+      "category": 4
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 24,
+    "fields": {
+      "name": "small-town life",
+      "category": 4
+    }
+  },
+  {
+    "model": "example_app.tagcategory",
+    "pk": 5,
+    "fields": {
+      "name": "Structural / Meta"
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 25,
+    "fields": {
+      "name": "prequel",
+      "category": 5
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 26,
+    "fields": {
+      "name": "spin-off",
+      "category": 5
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 27,
+    "fields": {
+      "name": "alternate timeline",
+      "category": 5
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 28,
+    "fields": {
+      "name": "crossover",
+      "category": 5
+    }
+  },
+  {
+    "model": "example_app.tag",
+    "pk": 29,
+    "fields": {
+      "name": "non-canon",
+      "category": 5
+    }
+  }
+]
