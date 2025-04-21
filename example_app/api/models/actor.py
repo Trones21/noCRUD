@@ -10,18 +10,16 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 
 class Actor(models.Model):
-    """ """
+    """The Actor model"""
 
-    originated_by = models.TextField(default="", blank=True)
-    originated_date = models.DateTimeField(auto_now_add=True)
-    last_updated_by = models.TextField(default="", blank=True)
-    last_updated_date = models.DateTimeField(auto_now=True)
+    first_name = models.TextField(default="", blank=False)
+    last_name = models.TextField(blank=False)
 
     class Meta:
         """Settings for the model."""
 
         managed = True
-        db_table = "Actor"
+        db_table = "actor"
 
 
 class ActorSerializer(ModelSerializer):

@@ -10,6 +10,12 @@ from django_filters.rest_framework import DjangoFilterBackend
 class TagCategory(models.Model):
     name = models.CharField(max_length=255)
 
+    class Meta:
+        """Settings for the model."""
+
+        managed = True
+        db_table = "tag_category"
+
 
 class TagCategorySerializer(ModelSerializer):
     """The serializer."""
@@ -41,6 +47,12 @@ class TagCategoryViewSet(ModelViewSet):
 class Tag(models.Model):
     name = models.CharField(max_length=50)
     category = models.ForeignKey(TagCategory, on_delete=models.PROTECT)
+
+    class Meta:
+        """Settings for the model."""
+
+        managed = True
+        db_table = "tag"
 
 
 class TagSerializer(ModelSerializer):

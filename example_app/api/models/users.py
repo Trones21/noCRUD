@@ -26,7 +26,7 @@ class Users(AbstractUser):
     REQUIRED_FIELDS = ["first_name", "last_name"]
     USERNAME_FIELD = "username"
 
-    username = models.CharField(unique=True, max_length=50)
+    username = models.CharField(null=False, unique=True, max_length=50)
     phone = models.TextField(blank=True, null=True)
     roles = models.ManyToManyField("api.Roles", through="api.UserRole")
     preferences = models.JSONField(blank=True, null=True)

@@ -1,0 +1,13 @@
+#!/bin/bash
+
+res=$(sh ./db_query.sh -q "
+DO \$\$ 
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+        EXECUTE 'DROP TABLE IF EXISTS public.' || quote_ident(r.tablename) || ' CASCADE';
+    END LOOP;
+END \$\$;
+")
+echo "$res"
