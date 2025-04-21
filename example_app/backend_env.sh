@@ -14,6 +14,8 @@ fi
  export POSTGRES_HOST="localhost"
  export POSTGRES_PORT="5432"
  
+ export APP_PORT="8000"
+ 
 # Set S3 env vars
 export top_level_bucket=""
 export S3_ACCESS_KEY=""

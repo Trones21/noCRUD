@@ -53,9 +53,9 @@ The project is organized to separate flows and CRUD operations for modularity an
 
 ## How to Use
 
-### 1. Running
+### Using the Runner
 
-To execute a specificflow, use the following command:
+To execute a specific flow, use the following command:
 
 ```bash
 python noCRUD.py -f <flow-name>
