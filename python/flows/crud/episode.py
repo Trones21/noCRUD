@@ -11,16 +11,16 @@ def crud():
         "length": 49,
         "newValue": None,
     }
-    crud_res = crud_exec("films", api, create, update_details)
+    crud_res = crud_exec("episodes", api, create, update_details)
     return crud_res
 
 
 def create(api: APIClient):
     """
-    Create the film.
+    Create the episode.
     """
-    # Create a film
-    obj = get_fixture_by_index("films.json", 0)
-    res = api.create_object("films", obj)
-    film_id = res["id"]
-    return film_id
+    # Create a episode
+    obj = get_fixture_by_index("episodes.json", 0)
+    res = api.create_object("episodes", obj)
+    episode_id = res["id"]
+    return episode_id

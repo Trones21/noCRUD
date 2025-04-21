@@ -9,12 +9,16 @@ import requests
 import io
 from contextlib import redirect_stdout
 from multiprocessing import Pool
-from flows import example_api_client, example_biz_logic
-from flows.crud import films
-from python.utils.provisioning import provision_env_for_flow
+
+### Local Utils
+from utils.provisioning import provision_env_for_flow
 from utils.db_client import DBClient
 from utils.printing import format_crud_print, print_group_separator, print_warn
 from utils.decorators import with_stack_trace
+
+##### Import Manually Registered Flows
+from flows import example_api_client, example_biz_logic
+from flows.crud import actor, episode
 
 ### Manually Registered
 
@@ -25,9 +29,7 @@ REQUEST_FLOWS = {
 }
 
 # Dictionary of crud flows - should not be multi-user or multi endpoint (except creating prerequisite objects)
-CRUD_FLOWS = {
-    "films": films.crud,
-}
+CRUD_FLOWS = {"episode": episode.crud, "actor": actor.crud}
 
 
 def main():
@@ -39,6 +41,12 @@ def main():
         print("Error collecting flows:", e)
 
     parser = argparse.ArgumentParser(description="Run backend user flow simulations.")
+    parser.add_argument(
+        "-s",
+        "--serial",
+        action="store_true",
+        help="Run flows serially",
+    )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
         "-f",
@@ -93,6 +101,10 @@ def main():
     db = DBClient()
     db.reset()
 
+    is_parallel = True
+    if args.serial:
+        is_parallel = False
+
     # Filter and Run
     print_group_separator("Run Flows")
     flows_to_run = []
@@ -105,7 +117,8 @@ def main():
     if args.crud:
         flows_to_run = CRUD_FLOWS.keys()
         print(f"Flows to run: {flows_to_run}")
-        crud_flows_runner(flows_to_run, allFlows)
+        print(is_parallel)
+        crud_flows_runner(flows_to_run, allFlows, parallel=is_parallel)
 
     if args.flows:
         flows_to_run = args.flows  # Add explicitly specified flows

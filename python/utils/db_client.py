@@ -2,9 +2,13 @@ import subprocess
 import psycopg
 from psycopg import sql
 from typing import Optional
+from config import APP_DIR
 from utils.fixtures import addFixtures
 import sys
 import os
+
+# global => file local
+app_dir = APP_DIR
 
 
 class DBClient:
@@ -131,7 +135,7 @@ class DBClient:
         self.dropAllTables()
 
         subprocess.run(
-            ["python", "manage.py", "migrate"], cwd="..", check=True
+            ["python", "manage.py", "migrate"], cwd=app_dir, check=True
         )  # Python subprocesses auto block so no need to use process.wait()
         addFixtures()
         return

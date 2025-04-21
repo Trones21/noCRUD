@@ -94,25 +94,29 @@ python noCRUD.py tbd -- this flag isn't implenmented yet, for now you'll have to
 ### 2. Available Flows
 
 There are two ways to add flows:
-  - Manual Registration
-  - Automatic Registration 
 
-You can list registered flows with the `-l / --list` flag 
+- Manual Registration
+- Automatic Registration
 
-#### Manual Registration 
+You can list registered flows with the `-l / --list` flag
+
+#### Manual Registration
+
 Add more flows by creating a new file in the `flows/` folder and implementing the workflow logic. Then import and register the flow in the appropriate dictionary (in noCRRUD.py)
 
 ### Automatic Registration
+
 You can register directories to be searched with the `collect_flows_by_folder(relativePath)` function. The inclusion logic is not currently exposed as an argument, its just `name.endswith("_flow")`
 
-Crud flows and request flows are currently manually registered only... there's a visibility/familiarity tradeoff here. I am considering making the crud flows automatically registered... but then you might not open main (noCRUD.py) as often which means you will be less familiar with how it works (and therefore it's a bit harder to bend to your will). 
+Crud flows and request flows are currently manually registered only... there's a visibility/familiarity tradeoff here. I am considering making the crud flows automatically registered... but then you might not open main (noCRUD.py) as often which means you will be less familiar with how it works (and therefore it's a bit harder to bend to your will).
 
-I understand the truth matrix of what you run, how its collected (automatic/manual) isnt MECE... but again see my point above. Everyone using this tool should be intimately familiar with the runner source code, not just their tests. 
-
+I understand the truth matrix of what you run, how its collected (automatic/manual) isnt MECE... but again see my point above. Everyone using this tool should be intimately familiar with the runner source code, not just their tests.
 
 ### 3. Different Execution Paths Depending on the Flag / Group of Flows
+
 Open `noCRUD.py` and you will notice that different flags use different runners:
-```python 
+
+```python
     if args.request_flows:
         flows_to_run = REQUEST_FLOWS.keys()
         print(f"Flows to run: {flows_to_run}")
@@ -122,8 +126,9 @@ Open `noCRUD.py` and you will notice that different flags use different runners:
         flows_to_run = CRUD_FLOWS.keys()
         print(f"Flows to run: {flows_to_run}")
         crud_flows_runner(flows_to_run, allFlows)
-    
+
 ```
+
 The main difference between these is that CRUD flows all output a very specific format, the CRUD dict, as seen in the implementation of `crud_exec`
 
 ```python
@@ -135,9 +140,11 @@ The main difference between these is that CRUD flows all output a very specific 
     crud["delete"] = delete(api, endpoint, id)
     return crud
 ```
-Therefore we have a consistent structure that our `format_crud_print` function can rely on. 
+
+Therefore we have a consistent structure that our `format_crud_print` function can rely on.
 
 Output:
+
 ```shell
 <add when I have the examples finished>
 ```
@@ -222,9 +229,13 @@ Output on Failure:
 
 ```
 
-### To Do
+### In Progress
 
 - Run each entity test on a separate db and backend (allows us to parallelize)
+
+### To Do
+
+mktest.py to scaffold tests following different standard patterns
 
 ## Contributing
 

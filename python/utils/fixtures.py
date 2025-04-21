@@ -3,6 +3,12 @@ import json
 from typing import Optional
 import subprocess
 
+from config import APP_DIR, FIXTURES_PATH
+
+# global => file local
+app_dir = APP_DIR
+fixtures_path = FIXTURES_PATH
+
 
 # Opening fixtures
 def resolve_path(relative_path):
@@ -14,8 +20,8 @@ def resolve_path(relative_path):
 
 def get_fixture(filename):
     """Wrapper for open_json"""
-    fixtureDir = resolve_path("./api/fixtures/")
-    return open_json(fixtureDir + filename)
+    fixtureDir = resolve_path(fixtures_path)
+    return open_json(f"{fixtureDir}/{filename}")
 
 
 def get_fixture_by_index(filename, index):
@@ -33,13 +39,11 @@ def open_json(filepath):
 
 def addFixtures(fixturesToAdd: Optional[list[str]] = None) -> None:
     print("adding fixtures")
-    fixturesPath = "api/fixtures"
-
     if fixturesToAdd is None:
         fixturesToAdd = ["", ""]
 
     for fixture in fixturesToAdd:
-        file = f"{fixturesPath}/{fixture}.json"
+        file = f"{fixtures_path}/{fixture}.json"
         result = subprocess.run(
             ["python", "manage.py", "loaddata", f"{file}"],
             cwd="..",

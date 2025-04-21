@@ -1,7 +1,6 @@
 import os
 import socket
-
-from python.utils.db_client import DBClient
+from utils.db_client import DBClient
 
 
 def provision_env_for_flow(flow_name):
@@ -16,7 +15,6 @@ def provision_env_for_flow(flow_name):
 
     # create db
     dbClient = DBClient()
-    dbClient.
     # start django
 
 
