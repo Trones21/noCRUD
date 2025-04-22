@@ -1,8 +1,10 @@
 import requests
-from utils.fixtures import get_fixture
+from utils.fixtures import get_fixture_by_index
 from utils.decorators import with_perf, with_stack_trace
 import json
 import os
+
+from utils.misc import random_string
 
 # Base API URL
 BASE_URL = f"http://localhost:{os.getenv('APP_PORT')}/api"
@@ -13,7 +15,7 @@ def login(username, password):
     headers = {"Content-Type": "application/json"}
     response = requests.post(
         f"http://localhost:{os.getenv('APP_PORT')}/api/login/",
-        json={"username": username, "password": "demo"},
+        json={"username": username, "password": password},
         headers=headers,
     )
     response.raise_for_status()
@@ -22,10 +24,41 @@ def login(username, password):
 
 
 def new_api_client_with_user_via_fixture(user_fixture_index):
-    users = get_fixture("users.json")
+    """Creates an APIClient with the user"""
+    users = get_fixture_by_index("users.json", user_fixture_index)
     creatingUser = users[user_fixture_index]["fields"]["username"]
+    unhashed_password = users[user_fixture_index]["unhashed_pass"]
     api = APIClient()
-    api.login(creatingUser, "demo")
+    api.login(creatingUser, unhashed_password)
+    return api
+
+
+def new_api_client_with_new_user_via_fixture(user_fixture_index):
+    """Creates an APIClient with a new user (retrieved via fixture). Note that this doesnt currently do any alteration,
+    so this will fail if you've already loaded the fixtures and you have some unique constraints
+    """
+    users = get_fixture_by_index("users.json", user_fixture_index)
+    creatingUser = users[user_fixture_index]["fields"]["username"]
+    unhashed_password = users[user_fixture_index]["unhashed_pass"]
+    api = APIClient()
+    api.login(creatingUser, unhashed_password)
+    return api
+
+
+def new_api_client_with_new_random_user():
+    """Creates an APIClient with a new randomly generated user"""
+    unhashed_pass = random_string(12)
+    creatingUser = {
+        "username": random_string(12),
+        "email": f"{random_string(12)}@example.com",
+        "password": unhashed_pass,
+    }
+
+    api = APIClient()
+    user_res = api.create_object("users", creatingUser)
+    creatingUser = user_res.get("username", creatingUser["username"])
+    api.login(creatingUser, unhashed_pass)
+
     return api
 
 
@@ -152,6 +185,12 @@ class APIClient:
         response = self.session.delete(url)
         if silent != True:
             return response
+
+    def get_user_id_via_username(self, username):
+        """Username is unique in backend so we dont currently need to handle
+        a case where multiple users are returned from the get_object call"""
+        res = self.get(f"users?username={username}", silent=True)
+        return res["results"][0]["id"]
 
 
 # Using just a request, not associated with a session

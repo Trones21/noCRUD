@@ -9,7 +9,6 @@ def setup():
 
     # Login
     user = get_fixture_by_index("users.json", 0)
-    creatingUser = user["username"]
     api = APIClient()
-    api.login(creatingUser, "demo")
+    api.login(user["username"], user["unhashed_pass"])
     return api

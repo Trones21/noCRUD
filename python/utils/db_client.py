@@ -137,6 +137,7 @@ class DBClient:
         subprocess.run(
             ["python", "manage.py", "migrate"], cwd=app_dir, check=True
         )  # Python subprocesses auto block so no need to use process.wait()
+        print("app_dir", app_dir)
         addFixtures()
         return
 

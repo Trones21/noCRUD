@@ -11,13 +11,14 @@ from contextlib import redirect_stdout
 from multiprocessing import Pool
 
 ### Local Utils
+from flows.biz_logic import pitch_lock_after_interactions
 from utils.provisioning import provision_env_for_flow
 from utils.db_client import DBClient
 from utils.printing import format_crud_print, print_group_separator, print_warn
 from utils.decorators import with_stack_trace
 
 ##### Import Manually Registered Flows
-from flows import example_api_client, example_biz_logic
+from flows import example_api_client
 from flows.crud import actor, episode
 
 ### Manually Registered
@@ -25,7 +26,7 @@ from flows.crud import actor, episode
 # Dictionary of request flows
 REQUEST_FLOWS = {
     "example_api_client": example_api_client.exec,
-    "example_biz_logic": example_biz_logic.exec,
+    "example_biz_logic": pitch_lock_after_interactions.exec,
 }
 
 # Dictionary of crud flows - should not be multi-user or multi endpoint (except creating prerequisite objects)

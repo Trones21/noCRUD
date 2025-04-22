@@ -25,8 +25,11 @@ def get_fixture(filename):
 
 
 def get_fixture_by_index(filename, index):
-    fixtures = get_fixture(filename)
-    return fixtures[index]["fields"]
+    entry = get_fixture(filename)[index]
+    fields = entry["fields"]
+    if "unhashed_pass" in entry:
+        fields["unhashed_pass"] = entry["unhashed_pass"]
+    return fields
 
 
 def open_json(filepath):
@@ -40,13 +43,13 @@ def open_json(filepath):
 def addFixtures(fixturesToAdd: Optional[list[str]] = None) -> None:
     print("adding fixtures")
     if fixturesToAdd is None:
-        fixturesToAdd = ["", ""]
+        fixturesToAdd = ["users"]
 
     for fixture in fixturesToAdd:
         file = f"{fixtures_path}/{fixture}.json"
         result = subprocess.run(
             ["python", "manage.py", "loaddata", f"{file}"],
-            cwd="..",
+            cwd=app_dir,
             capture_output=True,
             text=True,
             check=False,

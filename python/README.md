@@ -229,6 +229,85 @@ Output on Failure:
 
 ```
 
+That write-up is 🔥 — practical, clean, and very readable. Here's a lightly edited version if you want a slightly more polished version for documentation, README, or a LinkedIn post:
+
+---
+
+## ⚠️ A Note on Django Fixtures & Passwords
+
+If you're loading users via fixtures in Django, remember this:
+
+### **Django expects passwords to be pre-hashed.**
+
+If you load a user fixture with a plaintext password like `"fixture_pass"`, authentication will fail because Django won't be able to match the unhashed string against its expected hash format.
+
+---
+
+### ✅ Two Ways to Handle It
+
+#### 1. **Create users programmatically**
+
+Use Django’s built-in `create_user()` to ensure the password is hashed:
+
+```python
+User.objects.create_user(username="foo", password="fixture_pass")
+```
+
+I would recommend dropping this in the `common.py` file, maybe just replace the `setup()` function or create a similar one.
+
+#### 2. **Keep the unhashed password in the fixture (out-of-band)**
+
+If you want to stick with fixtures, store the unhashed password at the top level:
+
+```json
+{
+  "model": "api.users",
+  "pk": 1,
+  "unhashed_pass": "fixture_pass",
+  "fields": {
+    "username": "var_undecided",
+    "first_name": "var",
+    "last_name": "Undecided",
+    "password": "pbkdf2_sha256$260000$..."
+  }
+}
+```
+
+Then return that field in your fixture utility:
+
+```python
+def get_fixture_by_index(filename, index):
+    entry = get_fixture(filename)[index]
+    fields = entry["fields"]
+    if "unhashed_pass" in entry:
+        fields["unhashed_pass"] = entry["unhashed_pass"]
+    return fields
+```
+
+And use it in your setup:
+
+```python
+def setup():
+    db = DBClient()
+    db.clearDataExceptMinimalFixtures()
+
+    user = get_fixture_by_index("users.json", 0)
+    api = APIClient()
+    api.login(user["username"], user["unhashed_pass"])
+
+    return api
+```
+
+---
+
+### 🧠 Why This Matters
+
+This keeps your fixtures compatible with Django's expectations **and** your test code clean and DRY — no need to hardcode passwords in multiple places or hash them on load.
+
+---
+
+## Status
+
 ### In Progress
 
 - Run each entity test on a separate db and backend (allows us to parallelize)

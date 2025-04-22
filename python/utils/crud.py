@@ -1,4 +1,4 @@
-from .fixtures import get_fixture, get_fixture_by_index
+from .fixtures import get_fixture_by_index
 from .api_client import APIClient
 from .misc import random_string
 from typing import Callable, TypedDict, Optional
@@ -60,12 +60,6 @@ def crud_exec(
 
 def simpleGetAndCreate(api: APIClient, entityName, returnVal, id_field_name):
     returnValOptions = ["object", "id"]
-    # if returnVal
-
-    disciplines = get_fixture("disciplines.json")
-    obj = disciplines[0]["fields"]
-    res = api.create_object("disciplines", obj)
-    discipline_id = res["discipline_id"]
 
 
 # Creates an object and all prerequisite objects
