@@ -5,6 +5,8 @@ from django.shortcuts import render
 from django.urls import path
 from django.views.decorators.http import require_http_methods
 
+from api.models.episode import EpisodeViewSet
+from api.models.pitch_comment import PitchCommentViewSet
 from api.models.users import UsersViewSet
 from api.models.user_role import UserRoleViewSet
 from api.models.roles import RolesViewSet
@@ -42,9 +44,10 @@ router.register(r"production", ProductionViewSet)
 router.register(r"actor", ActorViewSet)
 router.register(r"character", CharacterViewSet)
 router.register(r"vote", VoteViewSet)
-router.register(r"tagcategory", TagCategoryViewSet)
+router.register(r"tag_category", TagCategoryViewSet)
 router.register(r"tag", TagViewSet)
-
+router.register(r"episode", EpisodeViewSet)
+router.register(r"pitch_comment", PitchCommentViewSet)
 urlpatterns = [
     path("", index, name="index"),
     path("login/", login_view, name="login"),

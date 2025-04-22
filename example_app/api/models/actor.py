@@ -38,7 +38,7 @@ class ActorViewSet(ModelViewSet):
     queryset = Actor.objects.order_by("pk")
     serializer_class = ActorSerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = [""]
+    filterset_fields = ["last_name"]
 
     @method_decorator(login_required)
     @method_decorator(permission_required("api.add_actor", raise_exception=True))

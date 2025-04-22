@@ -1,22 +1,10 @@
 [
   {
-    "model": "api.users",
+    "model": "api.actor",
     "pk": 1,
     "fields": {
-      "password": "fixture_pass",
-      "first_name": "var",
-      "last_name": "Undecided",
-      "username": "var_undecided"
-    }
-  },
-  {
-    "model": "api.users",
-    "pk": 2,
-    "fields": {
-      "password": "fixture_pass",
-      "first_name": "Pete",
-      "last_name": "Zahut",
-      "username": "PeteZahut"
+      "first_name": "Bryan",
+      "last_name": "Cranston"
     }
   }
 ]

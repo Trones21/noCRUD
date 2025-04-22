@@ -3,11 +3,9 @@
     "model": "app.episode",
     "pk": 1,
     "fields": {
-      "production": 1,
-      "season": 1,
-      "episode_number": 1,
-      "title": "Pilot",
-      "summary": "The beginning of Heisenberg."
+      "pitch": 1,
+      "user": 1,
+      "text": "This would be even better if they showed what multiple characters were doing during this timeframe. Would be interesting if some were high stakes and some were mundane"
     }
   }
 ]

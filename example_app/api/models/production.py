@@ -4,12 +4,33 @@ from .universe import Universe
 
 
 class Production(models.Model):
-    TYPE_CHOICES = [("film", "Film"), ("show", "TV Show")]
+    TYPE_CHOICES = [
+        ("film", "Film"),
+        ("show", "TV Show"),
+        ("web", "Web Series"),
+        ("short", "Short"),
+        ("promo", "Promo Clip"),
+        ("doc", "Documentary"),
+    ]
+
     title = models.CharField(max_length=255)
     year = models.IntegerField()
     type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+
+    # Media
     image = models.URLField(blank=True)
+    trailer_url = models.URLField(blank=True)
     description = models.TextField(blank=True)
+
+    # Source metadata
+    is_official = models.BooleanField(null=True)
+    distributor = models.CharField(
+        max_length=255, blank=True
+    )  # e.g., AMC, Netflix, YouTube
+    external_id = models.CharField(
+        max_length=100, blank=True
+    )  # e.g., IMDB ID, YouTube Playlist ID
+
     universe = models.ForeignKey(
         Universe,
         null=True,

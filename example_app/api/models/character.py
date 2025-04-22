@@ -1,14 +1,26 @@
 from django.db import models
 from rest_framework import serializers, viewsets
+
+from api.models.actor import Actor
 from .production import Production
 
 
 class Character(models.Model):
     name = models.CharField(max_length=255)
-    actor = models.CharField(max_length=255, blank=True)
+    actor = models.ForeignKey(
+        Actor,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="characters",
+    )
     description = models.TextField(blank=True)
     production = models.ForeignKey(
-        Production, on_delete=models.CASCADE, related_name="characters"
+        Production,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="characters",
     )
 
     def __str__(self):

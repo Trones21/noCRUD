@@ -2,18 +2,20 @@
   {
     "model": "api.users",
     "pk": 1,
+    "unhashed_pass": "fixture_pass",
     "fields": {
-      "password": "fixture_pass",
+      "password": "pbkdf2_sha256$260000$IFS5tJcljDfD6i54uqYOPs$vg5okYMRvaXQHelOr0vG2CzmRmi9r9lxEa1td/Li+yk=",
       "first_name": "var",
       "last_name": "Undecided",
-      "username": "var_undecided"
+      "username": "var_undecided",
+      "is_superuser": true
     }
   },
   {
     "model": "api.users",
     "pk": 2,
     "fields": {
-      "password": "fixture_pass",
+      "password": "pbkdf2_sha256$260000$IFS5tJcljDfD6i54uqYOPs$vg5okYMRvaXQHelOr0vG2CzmRmi9r9lxEa1td/Li+yk=",
       "first_name": "Pete",
       "last_name": "Zahut",
       "username": "PeteZahut"
