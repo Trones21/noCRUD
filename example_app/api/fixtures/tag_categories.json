@@ -1,0 +1,41 @@
+[
+  {
+    "model": "example_app.tagcategory",
+    "pk": 1,
+    "fields": {
+      "name": "Life Stage"
+    }
+  },
+
+  {
+    "model": "example_app.tagcategory",
+    "pk": 2,
+    "fields": {
+      "name": "Relationship Dynamics"
+    }
+  },
+
+  {
+    "model": "example_app.tagcategory",
+    "pk": 3,
+    "fields": {
+      "name": "Psychological Themes"
+    }
+  },
+
+  {
+    "model": "example_app.tagcategory",
+    "pk": 4,
+    "fields": {
+      "name": "Story Arcs / Settings"
+    }
+  },
+
+  {
+    "model": "example_app.tagcategory",
+    "pk": 5,
+    "fields": {
+      "name": "Structural / Meta"
+    }
+  }
+]

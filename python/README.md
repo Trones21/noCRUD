@@ -53,6 +53,27 @@ The project is organized to separate flows and CRUD operations for modularity an
 
 ## How to Use
 
+### Config
+
+Set `APP_DIR` and `FIXTURES_PATH` in config.py
+
+### Create a crud flow via the template
+
+Example: Create a crud flow for a `book` entity/url. On the PUT call, update the title field value to `newtitle`.
+Please ensure that:
+
+- the url is correct,
+- the fixture exists (and the name matches),
+- and the field exists on the model
+
+```bash
+python create_crud_flow.py book -uf title -ufv newtitle
+```
+
+Non crud flows are usually based on some kind of business logic and therefore don't have a standard template. Take a look at the examples for ideas.
+
+Possible Upgrade (Not Impemented): Add flag to create pre-req objects (as seen in production.py)
+
 ### Using the Runner
 
 To execute a specific flow, use the following command:
@@ -91,7 +112,7 @@ python noCRUD.py -req / --request_flows
 python noCRUD.py tbd -- this flag isn't implenmented yet, for now you'll have to just use -f with the flow name(s)
 ```
 
-### 2. Available Flows
+### Available Flows
 
 There are two ways to add flows:
 
@@ -112,7 +133,7 @@ Crud flows and request flows are currently manually registered only... there's a
 
 I understand the truth matrix of what you run, how its collected (automatic/manual) isnt MECE... but again see my point above. Everyone using this tool should be intimately familiar with the runner source code, not just their tests.
 
-### 3. Different Execution Paths Depending on the Flag / Group of Flows
+### Different Execution Paths Depending on the Flag / Group of Flows
 
 Open `noCRUD.py` and you will notice that different flags use different runners:
 
@@ -149,11 +170,7 @@ Output:
 <add when I have the examples finished>
 ```
 
-### 4. Data
-
-Data is primarily loaded from the `example-app/api/fixtures/` folder. However, for cases where you need to test with data not included in the fixtures (e.g., intentionally malformed objects to validate error handling), you can define such data directly in the flow function. This allows you to simulate specific backend responses or verify rule enforcement without modifying the static fixture files.
-
-### 5. Debugging
+### Debugging
 
 If a flow fails or doesn’t behave as expected:
 
@@ -204,32 +221,86 @@ Running the `entity_creation` flow:
 python noCRUD.py entity_creation
 ```
 
-Output:
+#### Output:
 
 ```text
-Running Flow: Entity Creation
+Running flow: universe
 ------------------------------------------------------------
-Step 1: Attempting to create Entity B (expected to fail)
-✅ Expected failure: Creation of Entity B is not allowed before Entity A.
+All tables cleared (except django required)
+adding fixtures
 
-Step 2: Creating Entity A
-✅ Entity A created: {"id": 1, "type": "entity_a", "name": "Required Entity"}
+API Client Created With var_undecided
+Object created: {'id': 2, 'name': 'Breaking Bad Universe', 'description': 'Includes Breaking Bad, Better Call Saul, etc.'}
+Create: 66.00 ms
 
-Step 3: Creating Entity B
-✅ Entity B created: {"id": 2, "type": "entity_b", "related_to": 1}
+Objects retrieved: {'id': 2, 'name': 'Breaking Bad Universe', 'description': 'Includes Breaking Bad, Better Call Saul, etc.'}
+Get: 70.22 ms
 
-Flow 'entity_creation' completed successfully.
+Get: 71.04 ms
+
+Object updated: {'id': 2, 'name': 'A whole new world', 'description': 'Includes Breaking Bad, Better Call Saul, etc.'}
+Update: 80.30 ms
+
+Object with ID 2 deleted successfully.
+Delete: 86.06 ms
+
+
+C:✔ R:✔ U:✔ D:✔
+
 ```
 
-Output on Failure:
+#### Output on Failure:
 
 - When a unexpected failure occurs, we've included the stack trace
 
-```bash
+```text
+Running flow: character
+------------------------------------------------------------
+All tables cleared (except django required)
+adding fixtures
 
+API Client Created With var_undecided
+🔴 ERROR 400: {"production":["Invalid pk \"1\" - object does not exist."]}
+🔍 Error Details: {
+  "production": [
+    "Invalid pk \"1\" - object does not exist."
+  ]
+}
+[DEBUG] Exception raised in create_object
+
+Flow 'character' failed with error: 400 Client Error: Bad Request for url: http://localhost:8000/api/character/
+Stack trace:
+Traceback (most recent call last):
+  File "/home/thomasrones/gh/noCRUD/python/noCRUD.py", line 201, in crud_flows_runner_serial
+    res = flow_function()
+  File "/home/thomasrones/gh/noCRUD/python/flows/crud/character.py", line 15, in crud
+    simple_create(api, "character", 0, "id", "characters.json"),
+  File "/home/thomasrones/gh/noCRUD/python/utils/crud.py", line 12, in simple_create
+    res = api.create_object(endpoint, obj)
+  File "/home/thomasrones/gh/noCRUD/python/utils/decorators.py", line 17, in wrapper
+    result = func(*args, **kwargs)
+  File "/home/thomasrones/gh/noCRUD/python/utils/decorators.py", line 40, in wrapper
+    return func(*args, **kwargs)
+  File "/home/thomasrones/gh/noCRUD/python/utils/api_client.py", line 97, in create_object
+    response.raise_for_status()
+  File "/usr/lib/python3/dist-packages/requests/models.py", line 943, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 400 Client Error: Bad Request for url: http://localhost:8000/api/character/
 ```
 
-That write-up is 🔥 — practical, clean, and very readable. Here's a lightly edited version if you want a slightly more polished version for documentation, README, or a LinkedIn post:
+#### Output Summary (CRUD Flows)
+
+```text
+================================================================================
+                                Results Summary
+================================================================================
+episode   : Fail: 400 Client Error: Bad Request for url: http://localhost:8000/api/episode/
+actor     : C:✔ R:✔ U:✔ D:✔
+character : Fail: 400 Client Error: Bad Request for url: http://localhost:8000/api/character/
+production: C:✔ R:✔ U:✔ D:✔
+universe  : C:✔ R:✔ U:✔ D:✔
+================================================================================
+```
 
 ---
 
@@ -314,7 +385,7 @@ This keeps your fixtures compatible with Django's expectations **and** your test
 
 ### To Do
 
-mktest.py to scaffold tests following different standard patterns
+- Move all exmaples to the example runner when complete (keep "implementation" folder clean... maybe just a short one-line readme in each of the flows folders e.g. "This is where you place manually registered crud flows")
 
 ## Contributing
 

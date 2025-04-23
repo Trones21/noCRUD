@@ -7,8 +7,8 @@ class Episode(models.Model):
     production = models.ForeignKey(
         Production, on_delete=models.CASCADE, related_name="episodes"
     )
-    season = models.IntegerField()
-    episode_number = models.IntegerField()
+    season = models.IntegerField(blank=True, null=True)
+    episode_number = models.IntegerField(blank=True, null=True)
     title = models.CharField(max_length=255)
     summary = models.TextField(blank=True)
 

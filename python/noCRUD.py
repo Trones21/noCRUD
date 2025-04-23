@@ -19,18 +19,40 @@ from utils.decorators import with_stack_trace
 
 ##### Import Manually Registered Flows
 from flows import example_api_client
-from flows.crud import actor, episode
+from flows.crud import (
+    actor,
+    episode,
+    character,
+    production,
+    tag,
+    tag_category,
+    universe,
+    pitch,
+    vote,
+    user,
+)
 
 ### Manually Registered
 
 # Dictionary of request flows
 REQUEST_FLOWS = {
     "example_api_client": example_api_client.exec,
-    "example_biz_logic": pitch_lock_after_interactions.exec,
+    "pitch_lock": pitch_lock_after_interactions.exec,
 }
 
 # Dictionary of crud flows - should not be multi-user or multi endpoint (except creating prerequisite objects)
-CRUD_FLOWS = {"episode": episode.crud, "actor": actor.crud}
+CRUD_FLOWS = {
+    "episode": episode.crud,
+    "actor": actor.crud,
+    "character": character.crud,
+    "production": production.crud,
+    "pitch": pitch.crud,
+    "universe": universe.crud,
+    "tag": tag.crud,
+    "tag_category": tag_category.crud,
+    "vote": vote.crud,
+    "user": user.crud,
+}
 
 
 def main():

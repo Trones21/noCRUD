@@ -15,11 +15,8 @@ class Character(models.Model):
         related_name="characters",
     )
     description = models.TextField(blank=True)
-    production = models.ForeignKey(
+    productions = models.ManyToManyField(
         Production,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
         related_name="characters",
     )
 

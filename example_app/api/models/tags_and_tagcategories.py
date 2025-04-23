@@ -33,7 +33,7 @@ class TagCategoryViewSet(ModelViewSet):
     queryset = TagCategory.objects.order_by("pk")
     serializer_class = TagCategorySerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = [""]
+    filterset_fields = ["name"]
 
     @method_decorator(login_required)
     @method_decorator(permission_required("api.add_tagcategory", raise_exception=True))
@@ -41,6 +41,7 @@ class TagCategoryViewSet(ModelViewSet):
         return super().create(request)
 
     def get_queryset(self):
+        print("self", self)
         return super().get_queryset()
 
 
@@ -71,7 +72,7 @@ class TagViewSet(ModelViewSet):
     queryset = Tag.objects.order_by("pk")
     serializer_class = TagSerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = [""]
+    filterset_fields = ["name", "category"]
 
     @method_decorator(login_required)
     @method_decorator(permission_required("api.add_Tag", raise_exception=True))

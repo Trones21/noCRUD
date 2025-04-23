@@ -1,13 +1,11 @@
 [
   {
-    "model": "app.pitch_comment",
+    "model": "app.episode",
     "pk": 1,
     "fields": {
-      "production": 1,
-      "season": 1,
-      "episode_number": 1,
-      "title": "Pilot",
-      "summary": "The beginning of Heisenberg."
+      "pitch": 1,
+      "user": 1,
+      "text": "This idea would be even better if..."
     }
   }
 ]

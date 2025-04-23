@@ -1,12 +1,5 @@
 [
   {
-    "model": "example_app.tagcategory",
-    "pk": 1,
-    "fields": {
-      "name": "Life Stage"
-    }
-  },
-  {
     "model": "example_app.tag",
     "pk": 1,
     "fields": {
@@ -52,13 +45,6 @@
     "fields": {
       "name": "full timeline",
       "category": 1
-    }
-  },
-  {
-    "model": "example_app.tagcategory",
-    "pk": 2,
-    "fields": {
-      "name": "Relationship Dynamics"
     }
   },
   {
@@ -110,13 +96,6 @@
     }
   },
   {
-    "model": "example_app.tagcategory",
-    "pk": 3,
-    "fields": {
-      "name": "Psychological Themes"
-    }
-  },
-  {
     "model": "example_app.tag",
     "pk": 13,
     "fields": {
@@ -165,13 +144,6 @@
     }
   },
   {
-    "model": "example_app.tagcategory",
-    "pk": 4,
-    "fields": {
-      "name": "Story Arcs / Settings"
-    }
-  },
-  {
     "model": "example_app.tag",
     "pk": 19,
     "fields": {
@@ -217,13 +189,6 @@
     "fields": {
       "name": "small-town life",
       "category": 4
-    }
-  },
-  {
-    "model": "example_app.tagcategory",
-    "pk": 5,
-    "fields": {
-      "name": "Structural / Meta"
     }
   },
   {

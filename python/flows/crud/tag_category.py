@@ -9,18 +9,17 @@ def crud():
     update_details: UpdateDetails = {
         "fieldName": "name",
         "length": 49,
-        "newValue": "A whole new world",
+        "newValue": "new_tagcategory_val",
     }
-    crud_res = crud_exec("universe", api, create, update_details)
+    crud_res = crud_exec("tag_category", api, create, update_details)
     return crud_res
 
 
 def create(api: APIClient):
     """
-    Create the universe.
+    Create the tag_category.
     """
-    # Create a universe
-    obj = get_fixture_by_index("universes.json", 0)
-    res = api.create_object("universe", obj)
-    universe_id = res["id"]
-    return universe_id
+    tag_category = get_fixture_by_index("tag_categories.json", 0)
+    res = api.create_object("tag_category", tag_category)
+    tag_category_id = res["id"]
+    return tag_category_id

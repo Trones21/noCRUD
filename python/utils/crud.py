@@ -10,6 +10,7 @@ def simple_create(
     """Assumes that the object is not dependent on other obejcts (and needs no other modification before request is sent)"""
     obj = get_fixture_by_index(fixtureName, fixtureIndex)
     res = api.create_object(endpoint, obj)
+    print("res", res)
     return res[idField]
 
 
@@ -21,7 +22,7 @@ def read(api: APIClient, endpoint, id):
 class UpdateDetails(TypedDict):
     fieldName: str
     length: int
-    newValue: Optional[str]
+    newValue: Optional[str | int]
 
 
 def update(api: APIClient, endpoint, id, updateDetails: UpdateDetails):
