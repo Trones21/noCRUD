@@ -10,15 +10,23 @@ import os
 # global => file local
 app_dir = APP_DIR
 
+print("loadeddb_client")
+
 
 class DBClient:
-    def __init__(self):
-        self.dbname = os.getenv("POSTGRES_DB_NAME", "postgres")
-        self.user = os.getenv("POSTGRES_USER", "postgres")
-        self.pw = os.getenv("POSTGRES_PASSWORD", "postgres")
-        self.host = os.getenv("POSTGRES_HOST", "localhost")
-        self.port = os.getenv("POSTGRES_PORT", "5432")
+    def __init__(self, admin_mode=False):
+        if admin_mode:
+            self.dbname = "postgres"
+            self.user = "postgres"
+            self.pw = "postgres"
 
+        else:
+            self.dbname = os.getenv("DB_NAME", "postgres")
+            self.user = os.getenv("DB_USER", "postgres")
+            self.pw = os.getenv("DB_PASS", "postgres")
+
+        self.host = os.getenv("DB_HOST", "localhost")
+        self.port = os.getenv("DB_PORT", "5432")
         # Connect to the default DB to run CREATE DATABASE
         self.conn = psycopg.connect(
             dbname=self.dbname,

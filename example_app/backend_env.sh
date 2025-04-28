@@ -1,5 +1,5 @@
 #!/bin/bash
-
+# An example of the load_backend_env.sh file I keep in ~/env_setup/<project>/
 # Check if the script is being sourced
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     echo "Please source this script to set the environment variables:"
@@ -8,11 +8,11 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 fi
 
 #Set postgres env vars
- export POSTGRES_DB_NAME="example_app_base"
- export POSTGRES_USER="postgres"
- export POSTGRES_PASSWORD="postgres"
- export POSTGRES_HOST="localhost"
- export POSTGRES_PORT="5432"
+ export DB_NAME="example_app_base"
+ export DB_USER="postgres"
+ export DB_PASS="postgres"
+ export DB_HOST="localhost"
+ export DB_PORT="5432"
  
  export APP_PORT="8000"
  
