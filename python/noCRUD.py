@@ -6,7 +6,6 @@ from typing import Dict, Callable
 import time
 
 ### Local Utils
-from flows.biz_logic import pitch_lock_after_interactions
 from runners.main import crud_flows_runner
 from runners.serial import request_flows_runner
 from utils.db_client import DBClient
@@ -14,45 +13,18 @@ from utils.printing import print_group_separator, print_warn
 from utils.decorators import with_stack_trace
 
 ##### Import Manually Registered Flows
-from flows import example_api_client
-from flows.crud import (
-    actor,
-    episode,
-    character,
-    production,
-    tag,
-    tag_category,
-    universe,
-    pitch,
-    vote,
-    user,
-)
 
 ### Manually Registered
 
 # Dictionary of request flows
-REQUEST_FLOWS = {
-    "example_api_client": example_api_client.exec,
-    "pitch_lock": pitch_lock_after_interactions.exec,
-}
+REQUEST_FLOWS = {}
 
 # Dictionary of crud flows - should not be multi-user or multi endpoint (except creating prerequisite objects)
-CRUD_FLOWS = {
-    "episode": episode.crud,
-    "actor": actor.crud,
-    "character": character.crud,
-    "production": production.crud,
-    "pitch": pitch.crud,
-    "universe": universe.crud,
-    "tag": tag.crud,
-    "tag_category": tag_category.crud,
-    "vote": vote.crud,
-    "user": user.crud,
-}
+CRUD_FLOWS = {}
 
 
 def main():
-    # Avoiding manual registration but flow functions must end in _flow
+    # Automatic registration - Currently flow functions must end in _flow to be collected
     collectedFlows: dict = {}
     try:
         collectedFlows = collect_flows_by_folder("flows/oneoff")
@@ -114,13 +86,13 @@ def main():
     # "Main"
     #####################################
 
-    #  -- This should only be on the serial side -- Run Migrations just to ensure we have a clean env
     start_time = time.perf_counter()
     print_group_separator("Initial Setup")
 
     is_parallel = True
     if args.serial:
         is_parallel = False
+        # This is only done on the serial side - provision_env takes care of this in parallel mode
         db = DBClient()
         db.reset()
 
