@@ -112,30 +112,75 @@ python noCRUD.py -req / --request_flows
 python noCRUD.py tbd -- this flag isn't implenmented yet, for now you'll have to just use -f with the flow name(s)
 ```
 
+Perfect — here's a drop-in replacement that keeps your structure and improves clarity and flow while including the caveat rewrite:
+
+---
+
 ### Available Flows
 
 There are two ways to add flows:
 
-- Manual Registration
-- Automatic Registration
+- **Manual Registration** _(Recommended when starting out)_
+- **Automatic Registration** _(Better once you're familiar with the tool)_
 
-You can list registered flows with the `-l / --list` flag
+You can check which flows have been registered — without running them — using:
 
-#### Manual Registration
+```bash
+python noCRUD.py -l
+# or
+python noCRUD.py --list
+```
 
-Add more flows by creating a new file in the `flows/` folder and implementing the workflow logic. Then import and register the flow in the appropriate dictionary (in noCRRUD.py)
+This helps you confirm registration worked as expected, especially when using automatic collection.
 
-### Automatic Registration
+---
 
-You can register directories to be searched with the `collect_flows_by_folder(relativePath)` function. The inclusion logic is not currently exposed as an argument, its just `name.endswith("_flow")`
+### 🔧 Manual Registration
 
-Crud flows and request flows are currently manually registered only... there's a visibility/familiarity tradeoff here. I am considering making the crud flows automatically registered... but then you might not open main (noCRUD.py) as often which means you will be less familiar with how it works (and therefore it's a bit harder to bend to your will).
+This is the most explicit and beginner-friendly method. You add your flows directly to the appropriate dictionary in `noCRUD.py`:
 
-I understand the truth matrix of what you run, how its collected (automatic/manual) isnt MECE... but again see my point above. Everyone using this tool should be intimately familiar with the runner source code, not just their tests.
+```python
+# noCRUD.py
+CRUD_FLOWS = {
+    "actor": actor.crud,
+    "character": character.crud,
+}
+```
+
+✅ **Benefits**:
+
+- Easy to trace what's being run
+- Encourages understanding of how runners work
+- Ideal for debugging and learning
+
+---
+
+### ⚙️ Automatic Registration
+
+Once you're more comfortable with the project, you can reduce boilerplate by automatically collecting flows from a folder:
+
+```python
+collect_flows_by_folder("flows/someFolder")
+```
+
+This will register any function in that folder that ends with `_flow`.
+
+✅ **Benefits**:
+
+- Great for scaling or generated tests
+- Keeps the main file (`noCRUD.py`) lean
+- Useful for prototyping and quick iteration
+
+⚠️ **Caveat**:
+It's easy to assume a flow was collected when it wasn’t. Use the `--list` flag to verify what was actually registered. This avoids surprises when running a batch of flows.
+
+Also, be careful to pair flows with the correct runner (e.g., don’t run CRUD flows through the request runner unless you want raw output).
+
+---
 
 ### Different Execution Paths Depending on the Flag / Group of Flows
 
-Open `noCRUD.py` and you will notice that different flags use different runners:
+IN `noCRUD.py` you may notice that different flags use different runners:
 
 ```python
     if args.request_flows:
@@ -166,8 +211,10 @@ Therefore we have a consistent structure that our `format_crud_print` function c
 
 Output:
 
-```shell
-<add when I have the examples finished>
+```text
+episode     : C:✔ R:✔ U:✔ D:✔
+actor       : C:✔ R:✔ U:✔ D:✔
+character   : C:✔ R:✔ U:✔ D:✔
 ```
 
 ### Debugging
@@ -215,10 +262,10 @@ Set breakpoints as desired.
 
 ### 5. Output Example (Not exact but just to give you an idea)
 
-Running the `entity_creation` flow:
+Running the `universe` flow:
 
 ```bash
-python noCRUD.py entity_creation
+python noCRUD.py -f universe
 ```
 
 #### Output:
@@ -243,9 +290,6 @@ Update: 80.30 ms
 
 Object with ID 2 deleted successfully.
 Delete: 86.06 ms
-
-
-C:✔ R:✔ U:✔ D:✔
 
 ```
 
@@ -381,11 +425,39 @@ This keeps your fixtures compatible with Django's expectations **and** your test
 
 ### In Progress
 
-- Run each entity test on a separate db and backend (allows us to parallelize)
+- Paralell Mode:
+
+  - crud runner: Complete and tested!
+  - request runner: not started
+  - flow runner: not started
+
+- Minor refactors
 
 ### To Do
 
-- Move all exmaples to the example runner when complete (keep "implementation" folder clean... maybe just a short one-line readme in each of the flows folders e.g. "This is where you place manually registered crud flows")
+- Decide how I want to do the backend output/logging for parallelized flows. The logs are currently mixed, but I do get the port...
+
+  ```shell
+  [Django:54947] Outgoing Response: 200
+  [Django:43445] [02/May/2025 20:30:50] "GET /api/production/1/ HTTP/1.1" 200 213
+  [Django:54947] [02/May/2025 20:30:50] "PUT /api/universe/1/ HTTP/1.1" 200 97
+  [Django:50147] Outgoing Response: 201
+  ```
+
+  - By showing something it at least gives the user confidence that things are running as expected, so definitely not planning on removing setup and teardown, e.g.
+    ✅ Database 'nocrud_p43445_production' created.
+    ✅ Database 'nocrud_p54947_universe' created.
+    ...
+    🗑️ Database 'nocrud_p50147_episode' dropped.
+    🗑️ Database 'nocrud_p37497_pitch' dropped.
+
+  - but for the actual server side logging (the requests).. I'm not sure i can come to a good decision
+
+  - I'm currently thinking one file per isolated flow... then a frontend could easily pick these up... but the way I envisioned this tool working is:
+    1. Run batch - see what failed
+    2. Choose an individual flow that failed and debug
+    3. Run batch, move to working on another flow that failed
+    - This might even clear up multiple. For example, you might see that a very fundamental entity failed and you know other entities depend on that one, so fixing that one causes the others to succeed as well
 
 ## Contributing
 
