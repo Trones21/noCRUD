@@ -6,9 +6,6 @@ import os
 
 from utils.misc import random_string
 
-# Base API URL
-BASE_URL = f"http://localhost:{os.getenv('APP_PORT')}/api"
-
 
 def login(username, password):
     """Log in a user and return their token."""
@@ -63,7 +60,9 @@ def new_api_client_with_new_random_user():
 
 
 class APIClient:
-    def __init__(self):
+    def __init__(self, base_url=None):
+        port = os.getenv("APP_PORT", "8000")
+        self.base_url = base_url or f"http://localhost:{port}/api"
         self.session = requests.Session()
         self.username = ""
 
@@ -71,7 +70,7 @@ class APIClient:
         """Log in a user and set cookies and X-CSRFToken"""
         headers = {"Content-Type": "application/json"}
         response = self.session.post(
-            f"http://localhost:{os.getenv('APP_PORT')}/api/login/",
+            f"{self.base_url}/login/",
             json={"username": username, "password": password},
             headers=headers,
         )
@@ -92,7 +91,7 @@ class APIClient:
     @with_stack_trace
     def create_object(self, endpoint, data):
         """Create an object at the specified endpoint and return the response."""
-        response = self.session.post(f"{BASE_URL}/{endpoint}/", json=data)
+        response = self.session.post(f"{self.base_url}/{endpoint}/", json=data)
         print_on_fail_status(response)
         response.raise_for_status()
         print(f"Object created: {response.json()}")
@@ -102,7 +101,7 @@ class APIClient:
     @with_stack_trace
     def get_object_by_id(self, endpoint, object_id=None, silent=False):
         """Read an object by ID or get all objects at the specified endpoint."""
-        url = f"{BASE_URL}/{endpoint}/"
+        url = f"{self.base_url}/{endpoint}/"
         if object_id:
             url += f"{object_id}/"
         response = self.session.get(url)
@@ -116,7 +115,9 @@ class APIClient:
     @with_stack_trace
     def update_object_by_id(self, endpoint, object_id, data):
         """Update an object by ID at the specified endpoint."""
-        response = self.session.put(f"{BASE_URL}/{endpoint}/{object_id}/", json=data)
+        response = self.session.put(
+            f"{self.base_url}/{endpoint}/{object_id}/", json=data
+        )
         print_on_fail_status(response)
         response.raise_for_status()
         print(f"Object updated: {response.json()}")
@@ -126,7 +127,7 @@ class APIClient:
     @with_stack_trace
     def delete_object_by_id(self, endpoint, object_id):
         """Delete an object by ID at the specified endpoint."""
-        url = f"{BASE_URL}/{endpoint}/"
+        url = f"{self.base_url}/{endpoint}/"
         if object_id:
             url += f"{object_id}/"
         response = self.session.delete(url)
@@ -140,7 +141,7 @@ class APIClient:
     @with_stack_trace
     def get(self, endpoint, silent=False):
         """Sends GET request the specified endpoint."""
-        response = self.session.get(f"{BASE_URL}/{endpoint}")
+        response = self.session.get(f"{self.base_url}/{endpoint}")
         print_on_fail_status(response)
         response.raise_for_status()
         if silent != True:
@@ -151,7 +152,7 @@ class APIClient:
     @with_stack_trace
     def post(self, endpoint, data=None, silent=False):
         """Sends POST request to the specified endpoint."""
-        response = self.session.post(f"{BASE_URL}/{endpoint}/", json=data)
+        response = self.session.post(f"{self.base_url}/{endpoint}/", json=data)
         print_on_fail_status(response)
         response.raise_for_status()
         if silent != True:
@@ -162,7 +163,7 @@ class APIClient:
     @with_stack_trace
     def put(self, endpoint, data=None, silent=False):
         """Sends PUT request to the specified endpoint."""
-        response = self.session.put(f"{BASE_URL}/{endpoint}/", json=data)
+        response = self.session.put(f"{self.base_url}/{endpoint}/", json=data)
         print_on_fail_status(response)
         response.raise_for_status()
         if silent != True:
@@ -173,7 +174,7 @@ class APIClient:
     @with_stack_trace
     def delete(self, endpoint, silent=False):
         """Sends DELETE request to the specified endpoint."""
-        response = self.session.delete(f"{BASE_URL}/{endpoint}")
+        response = self.session.delete(f"{self.base_url}/{endpoint}")
         print_on_fail_status(response)
         response.raise_for_status()
         print(f"{self.username}: object/s deleted: {response}")
@@ -181,7 +182,7 @@ class APIClient:
     # Cleanup methods dont raise on error (you might just run this to ensure that a table is empty before you write to it, but that of course would raise an error, which we dont want to see b/c it doesnt matter)
     def cleanup_delete(self, endpoint, silent=True):
         """Delete an object by ID at the specified endpoint."""
-        url = f"{BASE_URL}/{endpoint}"
+        url = f"{self.base_url}/{endpoint}"
         response = self.session.delete(url)
         if silent != True:
             return response
@@ -195,48 +196,48 @@ class APIClient:
 
 # Using just a request, not associated with a session
 # Only recommended if you are having an issue with cookies or headers and the APIClient is insufficient
-def create_object(endpoint, data, cookies, headers):
-    """Create an object at the specified endpoint and return the response."""
-    response = requests.post(
-        f"{BASE_URL}/{endpoint}/", json=data, cookies=cookies, headers=headers
-    )
-    response.raise_for_status()
-    print(f"Object created: {response.json()}")
-    return response.json()
+# def create_object(endpoint, data, cookies, headers):
+#     """Create an object at the specified endpoint and return the response."""
+#     response = requests.post(
+#         f"{self.base_url}/{endpoint}/", json=data, cookies=cookies, headers=headers
+#     )
+#     response.raise_for_status()
+#     print(f"Object created: {response.json()}")
+#     return response.json()
 
 
-def update_object(token, endpoint, object_id, data):
-    """Update an object by ID at the specified endpoint."""
-    headers = {"Authorization": f"Bearer {token}"}
-    response = requests.put(
-        f"{BASE_URL}/{endpoint}/{object_id}/", json=data, headers=headers
-    )
-    response.raise_for_status()
-    print(f"Object updated: {response.json()}")
-    return response.json()
+# def update_object(token, endpoint, object_id, data):
+#     """Update an object by ID at the specified endpoint."""
+#     headers = {"Authorization": f"Bearer {token}"}
+#     response = requests.put(
+#         f"{self.base_url}/{endpoint}/{object_id}/", json=data, headers=headers
+#     )
+#     response.raise_for_status()
+#     print(f"Object updated: {response.json()}")
+#     return response.json()
 
 
-def delete_object(token, endpoint, object_id=None):
-    """Delete an object by ID at the specified endpoint."""
-    headers = {"Authorization": f"Bearer {token}"}
-    url = f"{BASE_URL}/{endpoint}/"
-    if object_id:
-        url += f"{object_id}/"
-    response = requests.delete(url, headers=headers)
-    response.raise_for_status()
-    print(f"Object with ID {object_id} deleted successfully.")
+# def delete_object(token, endpoint, object_id=None):
+#     """Delete an object by ID at the specified endpoint."""
+#     headers = {"Authorization": f"Bearer {token}"}
+#     url = f"{BASE_URL}/{endpoint}/"
+#     if object_id:
+#         url += f"{object_id}/"
+#     response = requests.delete(url, headers=headers)
+#     response.raise_for_status()
+#     print(f"Object with ID {object_id} deleted successfully.")
 
 
-def read_object(token, endpoint, object_id=None):
-    """Read an object by ID or get all objects at the specified endpoint."""
-    headers = {"Authorization": f"Bearer {token}"}
-    url = f"{BASE_URL}/{endpoint}/"
-    if object_id:
-        url += f"{object_id}/"
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    print(f"Objects retrieved: {response.json()}")
-    return response.json()
+# def read_object(token, endpoint, object_id=None):
+#     """Read an object by ID or get all objects at the specified endpoint."""
+#     headers = {"Authorization": f"Bearer {token}"}
+#     url = f"{BASE_URL}/{endpoint}/"
+#     if object_id:
+#         url += f"{object_id}/"
+#     response = requests.get(url, headers=headers)
+#     response.raise_for_status()
+#     print(f"Objects retrieved: {response.json()}")
+#     return response.json()
 
 
 def print_on_fail_status(response):

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Minimum set of fixtures required to make things work
 declare -a fixtures=("users.json")
@@ -7,9 +7,12 @@ declare -a fixtures=("users.json")
 mkdir -p logs
 
 #Clear Old Migrations & DB
-rm -r ./api/migrations/
-sh ./clear_db.sh
-
+rm -rf ./api/migrations/
+echo "Resetting DB..."
+if ! bash ./reset_db.sh; then
+  echo "❌ Failed to reset DB. Stopping."
+  exit 1
+fi
 
 # Make Migration & Migrate
 mkdir ./api/migrations/
@@ -20,7 +23,7 @@ echo "--------------Migrations Created------------------------"
 python manage.py migrate
 echo "--------------Migrations Applied------------------------"
 
-fixture_path= "./api/fixtures/"
+fixture_path="./api/fixtures/"
 
 for n in $(seq 1 2); do
     echo "--------------Fixtures------------------------"

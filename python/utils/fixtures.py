@@ -41,10 +41,9 @@ def open_json(filepath):
 
 
 def addFixtures(fixturesToAdd: Optional[list[str]] = None) -> None:
-    print("adding fixtures")
     if fixturesToAdd is None:
         fixturesToAdd = ["users"]
-
+    print("adding fixtures", fixturesToAdd)
     for fixture in fixturesToAdd:
         file = f"{fixtures_path}/{fixture}.json"
         result = subprocess.run(

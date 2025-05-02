@@ -1,11 +1,11 @@
 #!/bin/bash
 #Please run backend_env to set environment variables, or modify here
 # Database connection details
-DB_HOST=$POSTGRES_HOST
-DB_PORT=$POSTGRES_PORT
-DB_NAME=$POSTGRES_DB_NAME
-DB_USER=$POSTGRES_USER
-DB_PASSWORD=$POSTGRES_PASSWORD
+DB_HOST=$DB_HOST
+DB_PORT=$DB_PORT
+DB_NAME=$DB_NAME
+DB_USER=$DB_USER
+DB_PASSWORD=$DB_PASS
 
 
 # Default SQL query ( in case it's easier to write here than as flag)
