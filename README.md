@@ -67,15 +67,6 @@ I've added this section so that `noCRUD.py` will make sense to people who havent
 
 Steps 2 & 3 are not completely mutually exclusive... I like to print a few specific things while running the test and then just print a summary at the end. It's also completely up to you to decide what to bubble up to the results.
 
-### Status
+## Status
 
-20250415 - There are a few example flows... but they dont really work, there is stuff not implemented, I'm just scaffolding. (Don't want this to seem fragile though... I use this runner extensively in personal projects, but I dont want to put any of that code here, so thats why I'm creating the example-app and example runner)
-
-### Work In Progress
-
-- Building out example app and example runner to show how it's actually used
-- Isolation/Parallelization
-
-### Other Potential Improvements
-
-- Build a real UI layer??, maybe just an export of a json that is fed to a modern reactive app??
+See the readme in the individual implementation folders (python, go) for implementation specific status.
