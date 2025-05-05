@@ -6,8 +6,7 @@ from typing import Dict, Callable
 import time
 
 ### Local Utils
-from runners.main import crud_flows_runner
-from runners.serial import request_flows_runner
+from runners.main import crud_flows_runners, request_flows_runners
 from utils.db_client import DBClient
 from utils.printing import print_group_separator, print_warn
 from utils.decorators import with_stack_trace
@@ -27,7 +26,7 @@ def main():
     # Automatic registration - Currently flow functions must end in _flow to be collected
     collectedFlows: dict = {}
     try:
-        collectedFlows = collect_flows_by_folder("flows/oneoff")
+        collectedFlows = collect_flows_by_folder("flows/sandbox")
     except Exception as e:
         print("Error collecting flows:", e)
 
@@ -87,12 +86,12 @@ def main():
     #####################################
 
     start_time = time.perf_counter()
-    print_group_separator("Initial Setup")
 
     is_parallel = True
     if args.serial:
         is_parallel = False
         # This is only done on the serial side - provision_env takes care of this in parallel mode
+        print_group_separator("Initial Setup")
         db = DBClient()
         db.reset()
 
@@ -100,20 +99,24 @@ def main():
     print_group_separator("Run Flows")
     flows_to_run = []
     allFlows = {**REQUEST_FLOWS, **CRUD_FLOWS, **collectedFlows}
+
     if args.request_flows:
         flows_to_run = REQUEST_FLOWS.keys()
         print(f"Flows to run: {flows_to_run}")
-        request_flows_runner(flows_to_run, allFlows)
+        flows = [(name, allFlows[name]) for name in flows_to_run]
+        request_flows_runners(flows, parallel=is_parallel)
 
     if args.crud:
         flows_to_run = CRUD_FLOWS.keys()
         print(f"Flows to run: {flows_to_run}")
-        crud_flows_runner(flows_to_run, allFlows, parallel=is_parallel)
+        flows = [(name, allFlows[name]) for name in flows_to_run]
+        crud_flows_runners(flows, parallel=is_parallel)
 
     if args.flows:
         flows_to_run = args.flows  # Add explicitly specified flows
         print(f"Flows to run: {flows_to_run}")
-        request_flows_runner(flows_to_run, allFlows)
+        flows = [(name, allFlows[name]) for name in flows_to_run]
+        request_flows_runners(flows, parallel=is_parallel)
 
     end_time = time.perf_counter()
     print("=" * 80)

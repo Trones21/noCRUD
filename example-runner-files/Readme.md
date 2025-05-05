@@ -1,13 +1,10 @@
-Here’s a cleaned-up and more polished version of your `example-runner-files/README.md`, keeping your tone while improving structure, flow, and precision:
-
----
-
 ## Setting up the Example Runner
 
 The `example-runner-files/` directory contains example flows you can copy into your runner implementation.
 
 > ⚠️ **IMPORTANT:**
-> These example files are designed to break if used directly. They contain _intentionally broken imports_.
+> These example files are designed to break if used directly.
+> They contain _intentionally broken imports_.
 > This is expected — once copied into the proper runner directories, all imports will resolve correctly.
 
 ---
@@ -52,7 +49,7 @@ REQUEST_FLOWS = {}
 # Dictionary of crud flows - should not be multi-user or multi-endpoint (except for prerequisites)
 CRUD_FLOWS = {
     "actor": actor.crud,
-    "tag": tag.crud
+    "tag": tag.crud,
 }
 ```
 
@@ -84,6 +81,11 @@ python noCRUD.py -f actor
 
 The test runner supports both **parallel** and **serial** modes:
 
+| Mode     | DB_USER            | DB_NAME Format          | Backend Started? | Notes                           | Runner Output                      | Backend Instance Output                                  |
+| -------- | ------------------ | ----------------------- | ---------------- | ------------------------------- | ---------------------------------- | -------------------------------------------------------- |
+| Serial   | use backend_env.sh | use backend_env.sh      | Already running  | Uses `backend_env.sh`           | Buffered to avoid log interleaving | Prefixed with `[Django:<port>]` but outut is interleaved |
+| Parallel | `postgres`         | `nocrud_p<port>_<flow>` | Spawned per flow | Uses `provision_env_for_flow()` | Realtime                           | Shown in your other terminal                             |
+
 #### ✅ Parallel (default)
 
 Each flow spins up its own isolated instance of `example_app` on a random port.
@@ -91,18 +93,19 @@ You **do not need** to start `example_app` manually.
 
 #### 🐢 Serial
 
-Run with the `--serial` flag:
+In this mode, you **must** start `example_app` yourself in a separate terminal.
+Make sure **both terminals** have the correct environment variables loaded:
 
 ```bash
-python noCRUD.py -crud --serial
+source <path>/example_app/backend_env.sh
 ```
-
-In this mode, you **must** start `example_app` yourself in a separate terminal:
 
 ```bash
 python manage.py runserver 8000
 ```
 
----
+Run with the `--serial` flag:
 
-Let me know if you want a matching `example-runner-files/request_flows/README.md` template too.
+```bash
+python noCRUD.py -crud --serial
+```

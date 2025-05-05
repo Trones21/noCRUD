@@ -8,7 +8,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 fi
 
 #Set postgres env vars
- export DB_NAME="example_app_base"
+ export DB_NAME="example"
  export DB_USER="postgres"
  export DB_PASS="postgres"
  export DB_HOST="localhost"
