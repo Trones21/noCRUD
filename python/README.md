@@ -100,7 +100,7 @@ python noCRUD.py -f example_no_sessions example_api_client
 python noCRUD.py -crud / --crud
 ```
 
-**Run request flows (manually registered) (not only crud, but rather for biz logic or whatever):**
+**Run request flows (manually registered - added to the REQUEST_FLOWS dictionary) (not only crud, but rather for biz logic or whatever):**
 
 ```bash
 python noCRUD.py -req / --request_flows
@@ -112,7 +112,68 @@ python noCRUD.py -req / --request_flows
 python noCRUD.py tbd -- this flag isn't implenmented yet, for now you'll have to just use -f with the flow name(s)
 ```
 
-Perfect — here's a drop-in replacement that keeps your structure and improves clarity and flow while including the caveat rewrite:
+### ⚡ Execution Modes
+
+The test runner supports both **parallel** and **serial** modes:
+
+| Mode     | DB_USER            | DB_NAME Format          | Backend Started? | Notes                           | Runner Output                      | Backend Instance Output                                  |
+| -------- | ------------------ | ----------------------- | ---------------- | ------------------------------- | ---------------------------------- | -------------------------------------------------------- |
+| Serial   | use backend_env.sh | use backend_env.sh      | Already running  | Uses `backend_env.sh`           | Buffered to avoid log interleaving | Prefixed with `[Django:<port>]` but outut is interleaved |
+| Parallel | `postgres`         | `nocrud_p<port>_<flow>` | Spawned per flow | Uses `provision_env_for_flow()` | Realtime                           | Shown in your other terminal                             |
+
+#### ✅ Parallel (default)
+
+Each flow spins up its own isolated instance of `example_app` on a random port.
+You **do not need** to start `example_app` manually.
+
+##### ⚠️ DB Persistence
+
+`run_isolated_flow` in parallel.py is currently setup to persist DBs for any flows that fail
+
+```python
+...
+            env["persist_db"] = False
+        return flow_name, formatted, buffer.getvalue()
+    except Exception as e:
+        env["persist_db"] = True
+...
+```
+
+And then `env` is passed to cleanup_env:
+
+```python
+def cleanup_env(env):
+    """Terminates the backend process and drops the DB"""
+    try:
+        env["proc"].terminate()
+        if env["persist_db"]:
+            print(f"Persisting db {env['DB_NAME']}")
+        else:
+            db_client = DBClient(admin_mode=True)
+            db_client.dropDB(env["DB_NAME"])
+    except Exception as e:
+        print(f"⚠️ Cleanup warning: {e}")
+
+```
+
+#### 🐢 Serial
+
+In this mode, you **must** start `example_app` yourself in a separate terminal.
+Make sure **both terminals** have the correct environment variables loaded:
+
+```bash
+source <path>/example_app/backend_env.sh
+```
+
+```bash
+python manage.py runserver 8000
+```
+
+Run the test runner with the `--serial` flag:
+
+```bash
+python noCRUD.py -crud --serial
+```
 
 ---
 
@@ -180,7 +241,7 @@ Also, be careful to pair flows with the correct runner (e.g., don’t run CRUD f
 
 ### Different Execution Paths Depending on the Flag / Group of Flows
 
-IN `noCRUD.py` you may notice that different flags use different runners:
+You may notice that different flags use different runners:
 
 ```python
     if args.request_flows:
@@ -260,7 +321,7 @@ Set breakpoints as desired.
 
 </details>
 
-### 5. Output Example (Not exact but just to give you an idea)
+### Output Example (Not exact but just to give you an idea)
 
 Running the `universe` flow:
 
@@ -424,14 +485,6 @@ This keeps your fixtures compatible with Django's expectations **and** your test
 ## Status
 
 ### In Progress
-
-- Paralell Mode:
-
-  - crud runner: Complete and tested!
-  - request runner: not started
-  - flow runner: not started
-
-- Minor refactors
 
 ### To Do
 
