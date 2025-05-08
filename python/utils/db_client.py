@@ -10,8 +10,6 @@ import os
 # global => file local
 app_dir = APP_DIR
 
-print("loadeddb_client")
-
 
 class DBClient:
     def __init__(self, admin_mode=False):

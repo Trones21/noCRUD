@@ -63,36 +63,70 @@ Run: `python noCRUD.py -crud`
 
 ### How It Works
 
-**Note: I am first implementing for `crud_flows_runner`, but the `req_flows_runner` will be pretty much the same**
-
 Each flow is provisioned its own app and db (object in postgres, not instance)
 
 The runner works the same up as serial mode until `crud_flows_runner` is called:
 
 ```python
-def crud_flows_runner(flowsToRun, allFlows, parallel=True):
+def crud_flows_runners(flows, parallel=True):
     """Run Flows with output that expects CRUD hashmap returned from each flow"""
-
-    # Pair flow names with functions so we can parallelize
-    flow_items = [(name, allFlows[name]) for name in flowsToRun]
-
     if parallel:
+        print("Parallel Run Begin \n")
+        run_isolated_crud_flow = partial(
+            run_isolated_flow, print_formatter=format_crud_print
+        )
         with Pool() as pool:
-            results = pool.map(run_isolated_flow, flow_items)
+            buffered_results = pool.map(run_isolated_crud_flow, flows)
+            print_buffered_results(buffered_results)
     else:
-        results = crud_flows_runner_serial(flowsToRun, allFlows)
+        serial_summary = crud_flows_runner_serial(flows)
+        print_unbuffered_results(serial_summary)
 ```
 
 Now taking a look at `run_isolated_flow` you will see that it calls `provision_env_for_flow`, which is found in `provisioning.py`
 
 ```python
-def run_isolated_flow(flow_name_and_func):
+def run_isolated_flow(flow_name_and_func, print_formatter=lambda x: x):
     flow_name, flow_function = flow_name_and_func
-    provision_env_for_flow(flow_name)
+    env = provision_env_for_flow(flow_name)
+    ...
 ```
 
 `provision_env_for_flow` creates the db and starts the app on an open port
 
 ```python
- <Pk_todo: Add when provision_env_for_flow is complete>
+def provision_env_for_flow(flow_name):
+    # You can derive a unique DB name and port from the flow name or hash
+    port = find_open_port()
+    db_name = f"api_runner_p{port}_{flow_name}"
+
+    # Update environment variables for the subprocess
+    os.environ["DB_NAME"] = db_name
+    os.environ["APP_PORT"] = str(port)
+
+    # create db
+    db_client = DBClient(admin_mode=True)
+    db_client.createDB(db_name)
+
+    # Make migrations and migrate
+    run_mgmt_command_quietly(args=["makemigrations"], cwd=APP_DIR, env=os.environ)
+    print(f"✅ Migration created for DB: {db_name}")
+
+    run_mgmt_command_quietly(args=["migrate"], cwd=APP_DIR, env=os.environ)
+    print(f"✅ Migration succeeded for DB: {db_name}")
+
+    # Ensure the db we just created is the same as what settings.py will use
+    db_match_check(db_name)
+
+    # start django
+    backend_proc = start_backend_subprocess(port)
+
+    env = {
+        "DB_NAME": db_name,
+        "APP_PORT": port,
+        "client": db_client,
+        "proc": backend_proc,
+    }
+
+    return env
 ```
