@@ -128,7 +128,7 @@ You **do not need** to start `example_app` manually.
 
 ##### ⚠️ DB Persistence
 
-`run_isolated_flow` in parallel.py is currently setup to persist DBs for any flows that fail
+`run_isolated_flow` in parallel.py is currently setup to persist DBs for any flows that fail. You can clean these up by running the `drop_dbs_by_pattern.sh` script, just pass in the pattern you want to use.
 
 ```python
 ...
