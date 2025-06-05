@@ -2,6 +2,8 @@ import time
 import functools
 import requests
 from typing import Callable, TypeVar
+from contextlib import contextmanager
+
 
 F = TypeVar("F", bound=Callable)
 
@@ -45,38 +47,9 @@ def with_stack_trace(func: F) -> F:
     return wrapper  # syntax error is just pylance failing
 
 
-## Original
-# def with_stack_trace(func):
-#     """Decorator to capture stack trace on request failures."""
-
-#     @functools.wraps(func)
-#     def wrapper(*args, **kwargs):
-#         try:
-#             return func(*args, **kwargs)
-#         except requests.exceptions.RequestException:
-#             raise  # No print/logging here, just re-raise the exception
-
-#     return wrapper
-
-
-# def with_perf(text=None):
-#     """Decorator to capture performance of passed function"""
-
-#     def decorator(func):
-#         @functools.wraps(func)
-#         def wrapper(*args, **kwargs):
-#             innerStart = time.perf_counter()
-#             result = func(*args, **kwargs)
-#             innerEnd = time.perf_counter()
-#             duration_ms = (innerEnd - innerStart) * 1000
-#             label = text or f"Duration of {func.__name__}:"
-#             print(f"{label} {duration_ms:.2f} ms\n")
-#             return result
-
-#         return wrapper
-
-#     # Handle the case where the decorator is used without arguments
-#     if callable(text):
-#         return decorator(text)  # Direct Usage @with_perf
-#     else:
-#         return decorator  # Usage with parenthese @with_perf("some text")
+@contextmanager
+def time_block(label):
+    start = time.perf_counter()
+    yield
+    elapsed = time.perf_counter() - start
+    print(f"[⏱] {label.ljust(30)}: {elapsed:.4f}s")
