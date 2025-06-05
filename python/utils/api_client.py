@@ -193,51 +193,10 @@ class APIClient:
         res = self.get(f"users?username={username}", silent=True)
         return res["results"][0]["id"]
 
-
-# Using just a request, not associated with a session
-# Only recommended if you are having an issue with cookies or headers and the APIClient is insufficient
-# def create_object(endpoint, data, cookies, headers):
-#     """Create an object at the specified endpoint and return the response."""
-#     response = requests.post(
-#         f"{self.base_url}/{endpoint}/", json=data, cookies=cookies, headers=headers
-#     )
-#     response.raise_for_status()
-#     print(f"Object created: {response.json()}")
-#     return response.json()
-
-
-# def update_object(token, endpoint, object_id, data):
-#     """Update an object by ID at the specified endpoint."""
-#     headers = {"Authorization": f"Bearer {token}"}
-#     response = requests.put(
-#         f"{self.base_url}/{endpoint}/{object_id}/", json=data, headers=headers
-#     )
-#     response.raise_for_status()
-#     print(f"Object updated: {response.json()}")
-#     return response.json()
-
-
-# def delete_object(token, endpoint, object_id=None):
-#     """Delete an object by ID at the specified endpoint."""
-#     headers = {"Authorization": f"Bearer {token}"}
-#     url = f"{BASE_URL}/{endpoint}/"
-#     if object_id:
-#         url += f"{object_id}/"
-#     response = requests.delete(url, headers=headers)
-#     response.raise_for_status()
-#     print(f"Object with ID {object_id} deleted successfully.")
-
-
-# def read_object(token, endpoint, object_id=None):
-#     """Read an object by ID or get all objects at the specified endpoint."""
-#     headers = {"Authorization": f"Bearer {token}"}
-#     url = f"{BASE_URL}/{endpoint}/"
-#     if object_id:
-#         url += f"{object_id}/"
-#     response = requests.get(url, headers=headers)
-#     response.raise_for_status()
-#     print(f"Objects retrieved: {response.json()}")
-#     return response.json()
+    def get_user_via_username(self, username):
+        """Get user"""
+        res = self.get(f"users?username={username}", silent=True)
+        return res["results"][0]
 
 
 def print_on_fail_status(response):

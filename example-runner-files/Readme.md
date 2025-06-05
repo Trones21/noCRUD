@@ -13,8 +13,9 @@ The `example-runner-files/` directory contains example flows you can copy into y
 
 To load the CRUD example flows, copy them into your flow directory:
 
+All commands assume your `pwd` is the noCRUD project root
+
 ```bash
-# From the noCRUD project root
 cp ./example-runner-files/crud/* ./python/flows/crud/
 ```
 
@@ -24,7 +25,13 @@ This places the flow files into `./python/flows/crud/`, where the runner expects
 
 ### ⚙️ Configuration
 
-No setup required — `config.py` is already pre-configured to match the example app structure.
+Set Envrionment variables
+
+```bash
+source ./example_app/backend_env.sh
+```
+
+`config.py` is already pre-configured to match the example app structure.
 
 ---
 
@@ -60,6 +67,41 @@ python noCRUD.py -l
 ```
 
 ---
+
+### Choose a Provisioning Method
+
+Since the runner is parallel by default, we need each flow to provision its own db and app.
+
+```text
+             ┌───────────────────┐     ┌──────────────────┐
+        -->  │ App :1 Port 8001  │ --> │ DB: noCRUD_p8001 │
+       /     ├───────────────────┤     ├──────────────────┤
+Runner --->  │ App :2 Port 8002  │ --> │ DB: noCRUD_p8002 │
+       \     ├───────────────────┤     ├──────────────────┤
+        -->  │ App :3 Port 8003  │ --> │ DB: noCRUD_p8003 │
+             └───────────────────┘     └──────────────────┘
+```
+
+There are currently 3 pre-built provisioning methods. Open `provisioning.py` and look at `provision_env_for_flow`
+
+One of the following calls needs to be uncommented. I recommend `provision_django_env_using_migrate` because there is no additional setup.
+
+```python
+    # return provision_django_env_direct_via_sql(flow_name)
+    # return provision_django_env_using_migrate(flow_name)
+    # return provision_django_env_direct_via_template_db(flow_name)
+```
+
+<details>
+    I created the other two provsioning methods due to the overhead that running migrations for each flow introduced. I documented the performance difference in a blog article [here](https://thomasrones.com/projects/open-source-contributions/no-crud/b07177ba-890b-4dac-bfc9-770f92997f6f)
+
+    [Youtube series](https://www.youtube.com/@not_only_CRUD) telling this optimization story is coming soon!
+
+    noCRUD is intended to be a scaffold for you. So let's say you have enough flows that the performance difference matters to you and you prefer to create & migrate the DB with `createdb -T <db_name>`, and you dont want to manually create the db and run the migrations each time. Well in this case you would simply place the template db creation and migration in the single threaded startup portion of the application, before each flow kicks off its own thread. Definitely going to make another youtube video detailing this as well
+
+</details>
+
+> If this is your first time running the flows, pay attention to the output! I've added stack traces and error messages to assist when something may be wrong with the setup. Additionally, you can check out the `Common Issues` markdown in the docs folder.
 
 ### ▶️ Running the Flows
 
