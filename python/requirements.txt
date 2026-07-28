@@ -1,0 +1,5 @@
+# Dependencies for the noCRUD Python runner itself.
+#   requests  - the APIClient's HTTP calls
+#   psycopg   - db_client (schema reset, per-flow DB provisioning); psycopg 3
+requests==2.32.3
+psycopg[binary]==3.2.1

@@ -1,6 +1,7 @@
 import traceback
 import requests
 from utils.printing import format_crud_print
+from utils import perf
 
 
 # These runners execute each flow in real-time (no output buffering),
@@ -13,6 +14,7 @@ def crud_flows_runner_serial(flows):
     results = {}
     for flow_name, flow_function in flows:
         print(f"Running flow: {flow_name}\n{'-' * 60}")
+        perf.set_current_flow(flow_name)
         try:
             res = flow_function()
             formatted = format_crud_print(res)
@@ -27,6 +29,8 @@ def crud_flows_runner_serial(flows):
             err = f"\nFlow '{flow_name}' failed: {e}\nStack trace:\n{tb}"
             print(err)
             results[flow_name] = f"Fail: {e}"
+        finally:
+            perf.flush_flow(flow_name)
     return results
 
 
@@ -37,6 +41,7 @@ def request_flows_runner_serial(flows):
         print(flow_name, flow_function)
 
     for flow_name, flow_function in flows:
+        perf.set_current_flow(flow_name)
         try:
             print(f"Running flow: {flow_name}\n{'-' * 60}")
             test_case_results[flow_name] = flow_function()
@@ -50,4 +55,6 @@ def request_flows_runner_serial(flows):
             print(f"\nFlow '{flow_name}' failed with error: {e} \n")
             print("Stack trace:")
             print(traceback.format_exc())
+        finally:
+            perf.flush_flow(flow_name)
     return test_case_results

@@ -12,6 +12,16 @@
 - 🔍 Verify **business logic and rule enforcement**, including invalid flows and expected failures
 - 📦 Reuse `create()` flows to **seed the database** with dependency-aware objects
 - 🧪 Reduce repetitive UI testing by interacting with the backend directly
+- 📈 Track request timings across runs and catch performance regressions (`--perf`; see [`python/docs/PERF.md`](./python/docs/PERF.md))
+
+---
+
+### 🤖 Set it up with Claude Code
+
+This repo ships a Claude Code skill that discovers your backend's endpoints and
+generates flows for you — no manual templating. Clone noCRUD alongside your
+project and just ask ("set up noCRUD for my backend"). See
+[`SCAFFOLD_WITH_CLAUDE.md`](./SCAFFOLD_WITH_CLAUDE.md) for a from-zero walkthrough.
 
 ---
 

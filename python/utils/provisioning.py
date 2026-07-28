@@ -74,7 +74,7 @@ def provision_django_env_using_migrate(flow_name):
     print(f"✅  Migration succeeded for DB: {db_name}")
 
     # Ensure the db we just created is the same as what settings.py will use
-    db_match_check(db_name, f"{APP_DIR}/example/settings.py")
+    db_match_check(db_name, f"{APP_DIR}/example_app/settings.py")
 
     # start django
     backend_proc = start_backend_subprocess(port)
@@ -123,7 +123,7 @@ def provision_django_env_direct_via_sql(flow_name):
     )
 
     # Ensure the db we just created is the same as what settings.py will use
-    db_match_check(db_name, f"{APP_DIR}/settings.py")
+    db_match_check(db_name, f"{APP_DIR}/example_app/settings.py")
 
     backend_proc = start_backend_subprocess(port)
 
@@ -152,7 +152,7 @@ def provision_django_env_direct_via_template_db(flow_name):
     db_client = DBClient(admin_mode=True)
 
     # Ensure the db we just created is the same as what settings.py will use
-    db_match_check(db_name, f"{APP_DIR}/settings.py")
+    db_match_check(db_name, f"{APP_DIR}/example_app/settings.py")
 
     backend_proc = start_backend_subprocess(port)
 

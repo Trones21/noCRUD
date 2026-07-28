@@ -1,1 +1,4 @@
 sandbox
+
+# noCRUD perf: run artifacts are transient; the baseline is committed
+python/perf/runs/
