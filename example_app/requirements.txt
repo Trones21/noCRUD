@@ -1,0 +1,16 @@
+# Dependencies for the bundled example_app (Django backend used to demo/dogfood
+# noCRUD). Pinned to a set verified to run on Python 3.11. The app was written in
+# the Django 3.2 era but runs on the 4.2 LTS line, which supports Python 3.11.
+Django==4.2.16
+djangorestframework==3.15.2
+drf-yasg==1.21.7
+drf-generators==0.5.0
+django-cors-headers==4.4.0
+mozilla-django-oidc==4.0.1
+django-filter==24.3
+django-extensions==3.2.3
+django-crum==0.7.9
+psycopg2-binary==2.9.9
+minio==7.2.8
+PyJWT==2.9.0
+cryptography==43.0.1

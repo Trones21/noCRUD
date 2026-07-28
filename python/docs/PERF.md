@@ -65,13 +65,19 @@ python noCRUD.py -crud --perf     # collect (also prints the diff)
 python perf_report.py --threshold 20   # non-zero exit fails the job on a regression
 ```
 
-A ready-to-adapt GitHub Actions workflow **template** lives at
-[`example-runner-files/ci/perf-regression.yml`](../../example-runner-files/ci/perf-regression.yml).
-Copy it into **your** project's `.github/workflows/` (the repo where you cloned
-noCRUD next to your app) — it does not belong in the noCRUD repo itself, which
-has no backend to gate. It runs flows with `--perf`, gates on regressions, and
-uploads the run dir as a build artifact; the perf steps are wired and the
-backend bring-up steps are marked `ADAPT` for your project.
+There are two workflows in this repo:
+
+- **Consumer template** —
+  [`example-runner-files/ci/perf-regression.yml`](../../example-runner-files/ci/perf-regression.yml).
+  Copy it into **your** project's `.github/workflows/` (the repo where you cloned
+  noCRUD next to your app). Perf steps are wired; backend bring-up is marked
+  `ADAPT`. It does not run in the noCRUD repo itself.
+- **Live example-app CI** —
+  [`.github/workflows/example-app-perf.yml`](../../.github/workflows/example-app-perf.yml)
+  runs noCRUD against the bundled `example_app` on every PR (a working,
+  end-to-end reference of this whole page). It runs without a committed baseline,
+  so it's green and non-flaky; to make it a real gate, capture a baseline from a
+  CI run's artifact and commit it as `python/perf/baseline.ndjson`.
 
 ## Notes / limits
 

@@ -1,0 +1,102 @@
+# Live CI: run noCRUD against the bundled example_app and collect timings.
+#
+# Unlike example-runner-files/ci/perf-regression.yml (a template for consumers),
+# THIS workflow belongs in the noCRUD repo: example_app is a real backend, so
+# noCRUD can dogfood itself here. It doubles as an end-to-end demo of the perf
+# feature. The recipe below was verified end to end (Python 3.11 + Django 4.2).
+#
+# On the gate: there is no committed baseline, because a baseline is only
+# meaningful on the machine that produced it — CI hardware differs from a laptop.
+# With no baseline, perf_report.py reports every key as "new" and exits 0, so the
+# job is green and non-flaky. To turn this into a real regression gate, capture a
+# baseline FROM a CI run (download the uploaded artifact, commit it as
+# python/perf/baseline.ndjson) and tune --threshold to the runner's noise.
+
+name: example-app-perf
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  perf:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: example
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DJANGO_KEY: ci-insecure-key
+      DB_NAME: example
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      APP_PORT: "8000"
+      USE_JWKS: "false"
+      PGPASSWORD: postgres
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r example_app/requirements.txt
+          pip install -r python/requirements.txt
+
+      - name: Migrate database
+        working-directory: example_app
+        run: python manage.py migrate
+
+      - name: Start the example app
+        working-directory: example_app
+        run: |
+          python manage.py runserver --noreload 0.0.0.0:8000 > /tmp/django.log 2>&1 &
+          # /api/docs is an AllowAny schema view that returns 200 once the app is up.
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://localhost:8000/api/docs && exit 0
+            sleep 1
+          done
+          echo "app did not become ready; server log:" && cat /tmp/django.log && exit 1
+
+      - name: Register example flows
+        # The runner (python/) is kept clean; the example flows live in
+        # example-runner-files/ and are auto-registered here at run time.
+        run: |
+          mkdir -p python/flows/auto_registered
+          touch python/flows/auto_registered/__init__.py
+          cp example-runner-files/auto_registered/*.py python/flows/auto_registered/
+
+      - name: Run flows with perf collection
+        working-directory: python
+        run: python noCRUD.py -coll --serial --perf
+
+      - name: Check for regressions
+        working-directory: python
+        run: python perf_report.py --threshold 25
+
+      - name: Upload timing artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: example-app-perf-runs
+          path: python/perf/runs/
+          if-no-files-found: warn
