@@ -118,12 +118,44 @@ it honest as adapters are added.**
 
 | Concern         | Django/DRF (implemented)                                             | Other frameworks |
 | --------------- | ------------------------------------------------------------------- | ---------------- |
-| DB provisioning | psql; per-flow DB via migrate, or bitwise template copy (`-T`). See `utils/provisioning.py` | Not implemented — must be written |
-| Start the app   | `manage.py runserver <port>` per flow (`provisioning.py`)           | Not implemented — must be written |
+| DB provisioning | psql; per-flow DB via migrate, or bitwise template copy (`-T`). See `utils/provisioning.py` | Not implemented — generate it (below) |
+| Start the app   | `manage.py runserver <port>` per flow (`provisioning.py`)           | Not implemented — generate it (below) |
 | Auth handshake  | `APIClient` login → session + CSRF token (`utils/api_client.py`)     | Edit `APIClient` for the project's auth |
 
-To support a new framework, fill in exactly these three rows — the discovery and
-generation phases don't change.
+### Generating an adapter for a new framework
+
+When the target backend isn't Django, **write the adapter** rather than telling
+the user it's unsupported. The runner interface you must satisfy is small and
+lives in `utils/provisioning.py`:
+
+- `provision_env_for_flow(flow_name) -> dict` — create an isolated DB, load the
+  schema / run migrations, start the app on a free port (use `find_open_port()`
+  and `wait_for_backend_to_listen_on_port()`), and return
+  `{"DB_NAME": ..., "APP_PORT": ..., "client": <db_client>, "proc": <process>}`.
+- `cleanup_env(env)` — terminate `env["proc"]` and drop `env["DB_NAME"]` unless
+  `env["persist_db"]` is set (the runner sets `persist_db=True` on failure so the
+  DB can be inspected).
+- `APIClient` in `utils/api_client.py` — the auth handshake and request methods.
+
+Model the new adapter on the existing `provision_django_env_*` functions. What
+changes per framework:
+
+- **DB provisioning** — the app's own migration tool, not `manage.py`. E.g. Go
+  backends use goose / golang-migrate / gorm auto-migrate; run that against the
+  fresh DB. The bitwise template-DB trick (`createdb -T`) is framework-agnostic
+  and worth reusing once a migrated template exists.
+- **Start the app** — `go run ./...` or a built binary on `$APP_PORT` instead of
+  `manage.py runserver`.
+- **Auth handshake** — match the real login (JWT bearer, session cookie, API
+  key). **This is the fiddly part: you need to know which headers dev expects**
+  (CSRF, `Authorization`, content-type, cookie names). Ask the user for these or
+  read them from the backend's auth middleware — don't guess silently.
+
+Confirm the app's DB engine, migration tool, run command, and auth scheme with
+the user before writing the adapter. After writing it, run one flow to prove the
+provision → request → cleanup loop works end to end before generating the rest.
+
+Keep the Framework Adapter table above updated when you add one.
 
 ## Notes
 
