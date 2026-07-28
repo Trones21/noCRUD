@@ -15,6 +15,15 @@
 
 ---
 
+### 🤖 Set it up with Claude Code
+
+This repo ships a Claude Code skill that discovers your backend's endpoints and
+generates flows for you — no manual templating. Clone noCRUD alongside your
+project and just ask ("set up noCRUD for my backend"). See
+[`SCAFFOLD_WITH_CLAUDE.md`](./SCAFFOLD_WITH_CLAUDE.md) for a from-zero walkthrough.
+
+---
+
 ### 💡 Two Modes of Use
 
 1. **CRUD Mode**
