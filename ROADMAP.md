@@ -35,9 +35,10 @@ regressions. See `python/docs/PERF.md` for usage.
 - [x] `perf_report.py` aggregates a run by `(flow, op, endpoint)` and diffs it
       against a committed `perf/baseline.ndjson`, flagging regressions past a
       threshold and exiting non-zero (CI gate). `--set-baseline` promotes a run.
-- [ ] Add percentiles (p95/p99) alongside mean once we collect enough samples.
-- [ ] Ship an example CI job (run flows `--perf`, fail on regression, upload the
-      run dir as an artifact).
+- [x] Percentiles (p95/p99) alongside mean; `perf_report.py --metric` gates on
+      the chosen metric.
+- [x] Example CI job — `.github/workflows/perf-regression.yml` (run flows
+      `--perf`, fail on regression, upload the run dir as an artifact).
 
 ## 3. Performance / load characterization mode
 

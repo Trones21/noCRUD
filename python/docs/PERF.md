@@ -35,11 +35,20 @@ mean latency.
 python perf_report.py                 # compare the latest run vs baseline
 python perf_report.py --run <run_id>  # compare a specific run
 python perf_report.py --threshold 25  # regression threshold in % (default 20)
+python perf_report.py --metric p95    # gate on p95 instead of mean (also p99)
 python perf_report.py --set-baseline  # promote latest (or --run) to baseline
 ```
 
 `perf_report.py` exits non-zero when any key regresses past the threshold, so it
 can gate CI directly.
+
+### Which metric?
+
+Each key reports `count`, `mean`, `p95`, and `p99`. Gate on `mean` by default.
+Percentiles (`--metric p95`/`p99`) catch tail regressions and need many samples
+per key to be stable — with one request per op (plain CRUD) p95/p99 just equal
+that single sample, and the report says so. They come into their own when a flow
+hits an endpoint many times, or with a load/hammer flow.
 
 ## What's committed vs. transient
 
@@ -56,10 +65,16 @@ python noCRUD.py -crud --perf     # collect (also prints the diff)
 python perf_report.py --threshold 20   # non-zero exit fails the job on a regression
 ```
 
+A ready-to-adapt GitHub Actions workflow lives at
+[`.github/workflows/perf-regression.yml`](../../.github/workflows/perf-regression.yml):
+it runs flows with `--perf`, gates on regressions, and uploads the run dir as a
+build artifact. The perf steps are wired; the backend bring-up steps are marked
+`ADAPT` for your project.
+
 ## Notes / limits
 
-- Comparison is on **mean** today; p95/p99 are on the roadmap once runs collect
-  enough samples per key.
+- Comparison gates on **mean** by default; `--metric p95`/`p99` gate on the tail
+  (see "Which metric?" above).
 - `op` is the `APIClient` method name (`create_object`, `get_object_by_id`, …)
   and `endpoint` is the resource passed to it — together they distinguish the
   four CRUD operations on the same resource.

@@ -1,0 +1,105 @@
+# noCRUD performance-regression gate.
+#
+# Runs your flows with --perf, compares the run against the committed baseline
+# (python/perf/baseline.ndjson), fails the job on a regression, and uploads the
+# raw timings as an artifact.
+#
+# The perf steps (run flows, compare, upload) are ready to use. The backend
+# bring-up steps are marked "ADAPT" — swap in whatever your project needs to
+# have a runnable runner (deps, DB schema, registered flows). The values below
+# target the bundled example_app (see example_app/backend_env.sh) as a concrete
+# starting point.
+#
+# Updating the baseline: it is committed on purpose. When a new performance level
+# is intentional, regenerate it locally and commit it:
+#     cd python && python noCRUD.py -crud --perf && python perf_report.py --set-baseline
+#     git add python/perf/baseline.ndjson && git commit -m "perf: update baseline"
+
+name: perf-regression
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      threshold:
+        description: "Regression threshold (percent)"
+        default: "20"
+      metric:
+        description: "Metric to gate on (mean, p95, p99)"
+        default: "mean"
+
+jobs:
+  perf:
+    runs-on: ubuntu-latest
+
+    # Postgres for the runner's per-flow DB provisioning (parallel mode creates
+    # and drops databases as superuser). ADAPT if your app uses a different DB.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Mirrors example_app/backend_env.sh — ADAPT to your app's env contract.
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      PGPASSWORD: postgres
+
+    defaults:
+      run:
+        working-directory: python
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # ADAPT: install your runner + backend dependencies. The example app needs
+      # roughly these; pin them in a requirements.txt for reproducible runs.
+      - name: Install dependencies
+        run: pip install django djangorestframework psycopg2-binary requests
+
+      # ADAPT: get to a runnable runner. This means (a) your backend can migrate
+      # and start, and (b) your flows are registered (CRUD_FLOWS / REQUEST_FLOWS
+      # in noCRUD.py, or auto_registered/). For the example app that is roughly:
+      #   cp ../example-runner-files/crud/* flows/crud/   # then register them
+      #   (cd ../example_app && python manage.py migrate)
+      - name: Prepare runner
+        run: |
+          echo "ADAPT - register flows and prepare the backend here"
+
+      # Collect timings. Use -crud, -req, or -f <flow> to match what you want to
+      # gate. Parallel mode (default) provisions an isolated DB+app per flow.
+      - name: Run flows with perf collection
+        run: python noCRUD.py -crud --perf
+
+      # Gate: non-zero exit on any regression past the threshold fails the job.
+      - name: Check for regressions
+        run: |
+          python perf_report.py \
+            --threshold "${{ github.event.inputs.threshold || '20' }}" \
+            --metric "${{ github.event.inputs.metric || 'mean' }}"
+
+      # Keep the raw numbers even when the gate passes.
+      - name: Upload timing artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-runs
+          path: python/perf/runs/
+          if-no-files-found: warn
