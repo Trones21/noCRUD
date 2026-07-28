@@ -6,6 +6,7 @@ from runners.main import crud_flows_runners, request_flows_runners
 from utils.db_client import DBClient
 from utils.printing import print_group_separator
 from utils.collector import collect_flows_by_folder
+from utils import perf
 ##### Import Manually Registered Flows
 
 ### Manually Registered
@@ -31,6 +32,12 @@ def main():
         "--serial",
         action="store_true",
         help="Run flows serially",
+    )
+    parser.add_argument(
+        "-perf",
+        "--perf",
+        action="store_true",
+        help="Persist request timings for this run and compare against the baseline",
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
@@ -88,6 +95,16 @@ def main():
     # "Main"
     #####################################
 
+    perf_run_dir = None
+    if args.perf:
+        import os
+
+        os.environ["NOCRUD_PERF"] = "1"
+        # Init in the parent so child processes (parallel mode) inherit the run id.
+        run_id = perf.init_run()
+        perf_run_dir = perf.RUNS_DIR / run_id
+        print(f"⏱  Perf collection on — run id {run_id}")
+
     start_time = time.perf_counter()
 
     is_parallel = True
@@ -130,6 +147,16 @@ def main():
     end_time = time.perf_counter()
     print("=" * 80)
     print(f"\nTest runner took: {end_time - start_time:.6f} seconds")
+
+    if args.perf and perf_run_dir is not None:
+        from perf_report import compare_and_print
+
+        print_group_separator("Timings")
+        compare_and_print(perf_run_dir)
+        print(
+            "\nSet this run as the baseline to compare against next time:\n"
+            "  python perf_report.py --set-baseline"
+        )
 
 
 if __name__ == "__main__":

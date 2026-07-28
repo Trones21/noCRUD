@@ -12,6 +12,7 @@
 - 🔍 Verify **business logic and rule enforcement**, including invalid flows and expected failures
 - 📦 Reuse `create()` flows to **seed the database** with dependency-aware objects
 - 🧪 Reduce repetitive UI testing by interacting with the backend directly
+- 📈 Track request timings across runs and catch performance regressions (`--perf`; see [`python/docs/PERF.md`](./python/docs/PERF.md))
 
 ---
 

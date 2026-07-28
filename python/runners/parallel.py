@@ -3,10 +3,12 @@ import io
 import traceback
 from utils.provisioning import cleanup_env, provision_env_for_flow
 from utils.decorators import time_block
+from utils import perf
 
 
 def run_isolated_flow(flow_name_and_func, print_formatter=lambda x: x):
     flow_name, flow_function = flow_name_and_func
+    perf.set_current_flow(flow_name)
     with time_block("provision env"):
         env = provision_env_for_flow(flow_name)
     buffer = io.StringIO()
@@ -28,3 +30,4 @@ def run_isolated_flow(flow_name_and_func, print_formatter=lambda x: x):
         return flow_name, f"Fail: {e}", buffer.getvalue() + err
     finally:
         cleanup_env(env)
+        perf.flush_flow(flow_name)

@@ -22,24 +22,22 @@ or the backend's auth middleware — it can't be reliably guessed.
 - [ ] Reference Go adapter (goose/golang-migrate or gorm; `go run`/binary; JWT)
 - [ ] Reference adapters for other common stacks as they come up
 
-## 2. Persisted timings for CI/CD (regression tracking)
+## 2. Persisted timings for CI/CD (regression tracking) — implemented
 
-Today timings are captured per request (`@with_perf` in `utils/decorators.py`)
-but only **printed**. To catch performance regressions across runs we want to
-save them.
+Timings are captured per request (`@with_perf` in `utils/decorators.py`). They
+still print inline, and now they can also be **persisted and compared** to catch
+regressions. See `python/docs/PERF.md` for usage.
 
-**Sketch:**
-
-- Route `@with_perf` output through the collector into structured records:
-  `{flow, endpoint, method, ms, timestamp, git_sha}`.
-- Write newline-delimited JSON (or CSV) under `perf/` — git-diffable and easy to
-  publish as a CI artifact.
-- On each run, optionally diff against a baseline (previous run, or a committed
-  baseline file) and flag regressions past a threshold (e.g. p95 +20%).
-- In CI: run flows → write the perf file → compare to baseline → warn/fail on
-  regression. So after a code change you can see exactly how timings moved.
-
-Touches `decorators.py`, `collector.py`, and runner output. Contained feature.
+- [x] `--perf` flag on `noCRUD.py` persists timings to
+      `perf/runs/<run_id>/<flow>.ndjson` as records
+      `{run_id, git_sha, ts, flow, op, endpoint, ms}` (one file per flow, so
+      parallel mode has no write contention).
+- [x] `perf_report.py` aggregates a run by `(flow, op, endpoint)` and diffs it
+      against a committed `perf/baseline.ndjson`, flagging regressions past a
+      threshold and exiting non-zero (CI gate). `--set-baseline` promotes a run.
+- [ ] Add percentiles (p95/p99) alongside mean once we collect enough samples.
+- [ ] Ship an example CI job (run flows `--perf`, fail on regression, upload the
+      run dir as an artifact).
 
 ## 3. Performance / load characterization mode
 

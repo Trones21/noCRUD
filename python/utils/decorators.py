@@ -4,6 +4,8 @@ import requests
 from typing import Callable, TypeVar
 from contextlib import contextmanager
 
+from utils import perf
+
 
 F = TypeVar("F", bound=Callable)
 
@@ -21,6 +23,16 @@ def with_perf(text: str | None = None) -> Callable[[F], F]:
             duration_ms = (innerEnd - innerStart) * 1000
             label = text or f"Duration of {func.__name__}:"
             print(f"{label} {duration_ms:.2f} ms\n")
+            # Persist the timing for regression tracking (no-op unless enabled).
+            # Best-effort: perf must never break a run. For APIClient methods the
+            # first positional arg after `self` is the endpoint/resource name.
+            try:
+                endpoint = (
+                    args[1] if len(args) > 1 and isinstance(args[1], str) else None
+                )
+                perf.record(func.__name__, endpoint, duration_ms)
+            except Exception:
+                pass
             return result
 
         return wrapper

@@ -161,5 +161,6 @@ Keep the Framework Adapter table above updated when you add one.
 
 - The **Go** runner lags the Python one and has no scaffolding path yet; this
   skill targets the Python runner. Bringing Go to parity is separate work.
-- Request timings are collected and printed per request (via `@with_perf`) but
-  not yet aggregated or persisted.
+- Request timings are collected per request (via `@with_perf`). They print
+  inline, and with the `--perf` flag they are also persisted and compared
+  against a baseline for regression tracking — see `python/docs/PERF.md`.
