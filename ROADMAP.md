@@ -37,8 +37,10 @@ regressions. See `python/docs/PERF.md` for usage.
       threshold and exiting non-zero (CI gate). `--set-baseline` promotes a run.
 - [x] Percentiles (p95/p99) alongside mean; `perf_report.py --metric` gates on
       the chosen metric.
-- [x] Example CI job — `.github/workflows/perf-regression.yml` (run flows
-      `--perf`, fail on regression, upload the run dir as an artifact).
+- [x] Example CI job — `example-runner-files/ci/perf-regression.yml`, a template
+      the consuming repo copies into its own `.github/workflows/` (run flows
+      `--perf`, fail on regression, upload the run dir as an artifact). It is not
+      a live workflow in the noCRUD repo, which has no backend to gate.
 
 ## 3. Performance / load characterization mode
 

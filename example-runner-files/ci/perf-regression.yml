@@ -1,8 +1,13 @@
-# noCRUD performance-regression gate.
+# noCRUD performance-regression gate — TEMPLATE.
 #
-# Runs your flows with --perf, compares the run against the committed baseline
-# (python/perf/baseline.ndjson), fails the job on a regression, and uploads the
-# raw timings as an artifact.
+# Copy this into YOUR project's .github/workflows/ (the repo where you cloned
+# noCRUD alongside your app). It intentionally does NOT live under .github/ in
+# the noCRUD repo itself — noCRUD is the open-source tool you clone; it has no
+# backend to gate, so this workflow only makes sense in the consuming repo.
+#
+# What it does: runs your flows with --perf, compares the run against your
+# committed baseline (python/perf/baseline.ndjson), fails the job on a
+# regression, and uploads the raw timings as an artifact.
 #
 # The perf steps (run flows, compare, upload) are ready to use. The backend
 # bring-up steps are marked "ADAPT" — swap in whatever your project needs to

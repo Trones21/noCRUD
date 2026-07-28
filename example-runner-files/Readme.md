@@ -151,3 +151,12 @@ Run with the `--serial` flag:
 ```bash
 python noCRUD.py -crud --serial
 ```
+
+---
+
+### 📈 CI perf gate (optional)
+
+`ci/perf-regression.yml` is a GitHub Actions **template**. Copy it into your own
+project's `.github/workflows/` to run flows with `--perf` on every PR and fail
+the build on a performance regression. It belongs in your repo, not the noCRUD
+repo. See `python/docs/PERF.md` for how timings and baselines work.

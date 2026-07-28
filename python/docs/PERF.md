@@ -65,11 +65,13 @@ python noCRUD.py -crud --perf     # collect (also prints the diff)
 python perf_report.py --threshold 20   # non-zero exit fails the job on a regression
 ```
 
-A ready-to-adapt GitHub Actions workflow lives at
-[`.github/workflows/perf-regression.yml`](../../.github/workflows/perf-regression.yml):
-it runs flows with `--perf`, gates on regressions, and uploads the run dir as a
-build artifact. The perf steps are wired; the backend bring-up steps are marked
-`ADAPT` for your project.
+A ready-to-adapt GitHub Actions workflow **template** lives at
+[`example-runner-files/ci/perf-regression.yml`](../../example-runner-files/ci/perf-regression.yml).
+Copy it into **your** project's `.github/workflows/` (the repo where you cloned
+noCRUD next to your app) — it does not belong in the noCRUD repo itself, which
+has no backend to gate. It runs flows with `--perf`, gates on regressions, and
+uploads the run dir as a build artifact; the perf steps are wired and the
+backend bring-up steps are marked `ADAPT` for your project.
 
 ## Notes / limits
 
