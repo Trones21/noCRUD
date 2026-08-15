@@ -202,6 +202,23 @@ If your backend isn't Django, `ProvisionEnvForFlow` in
 `utils/provisioning/provisioning.go` is the only thing to replace — everything
 above it is framework-agnostic HTTP.
 
+#### Ports
+
+A flow's port is **reserved and held** (`ReserveOpenPort`) until the instant the
+app binds it, not merely looked up and let go. Asking the OS for a free port and
+releasing it leaves a window in which the port belongs to nobody — and in the
+migrate path that window is several seconds wide, since the database is created
+and migrated before the app ever starts.
+
+At handover the runner also checks nothing beat it to the port
+(`AssertPortNotTaken`), which it can only know *before* the app is spawned:
+afterwards, a process that already owns the port answers the readiness probe
+just as convincingly as your own app would. Without that check a collision
+doesn't fail — it runs the flow against another app and another database and
+usually reports a pass.
+
+See `python/docs/COMMON_ISSUES.md` for what the resulting errors mean.
+
 ### Serial
 
 Start the app yourself, then:

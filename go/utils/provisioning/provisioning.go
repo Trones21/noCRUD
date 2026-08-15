@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -69,9 +70,10 @@ func ProvisionEnvForFlow(ctx context.Context, flowName string, out io.Writer) (*
 // ProvisionDjangoEnvUsingMigrate creates the database and runs manage.py
 // migrate into it. Slowest of the three, but needs no setup at all.
 func ProvisionDjangoEnvUsingMigrate(ctx context.Context, flowName string, out io.Writer) (*nocrud.Env, error) {
-	env, err := newEnv(ctx, flowName, out)
+	env, reservation, err := newEnv(ctx, flowName, out)
+	defer reservation.Release()
 	if err != nil {
-		return nil, err
+		return env, err
 	}
 
 	// Django's makemigrations has no --noinput, so it hangs whenever it wants
@@ -90,16 +92,17 @@ func ProvisionDjangoEnvUsingMigrate(ctx context.Context, flowName string, out io
 	if err := DBMatchCheck(ctx, env, out); err != nil {
 		return env, err
 	}
-	return env, StartBackend(ctx, env, out)
+	return env, StartBackend(ctx, env, out, reservation)
 }
 
 // ProvisionDjangoEnvDirectViaSQL creates the database and loads a schema dump
 // into it with psql — much faster than migrating, at the cost of keeping
 // schema.sql current.
 func ProvisionDjangoEnvDirectViaSQL(ctx context.Context, flowName string, out io.Writer) (*nocrud.Env, error) {
-	env, err := newEnv(ctx, flowName, out)
+	env, reservation, err := newEnv(ctx, flowName, out)
+	defer reservation.Release()
 	if err != nil {
-		return nil, err
+		return env, err
 	}
 
 	schemaPath := filepath.Join(config.AppDir(), "schema.sql")
@@ -125,7 +128,7 @@ func ProvisionDjangoEnvDirectViaSQL(ctx context.Context, flowName string, out io
 	if err := DBMatchCheck(ctx, env, out); err != nil {
 		return env, err
 	}
-	return env, StartBackend(ctx, env, out)
+	return env, StartBackend(ctx, env, out, reservation)
 }
 
 // ProvisionDjangoEnvDirectViaTemplateDB clones an already-migrated template
@@ -137,11 +140,12 @@ func ProvisionDjangoEnvDirectViaTemplateDB(ctx context.Context, flowName string,
 		template = "template_db"
 	}
 
-	port, err := FindOpenPort()
+	reservation, err := ReserveOpenPort()
 	if err != nil {
 		return nil, err
 	}
-	env := envForPort(flowName, port)
+	defer reservation.Release()
+	env := envForPort(flowName, reservation.Port)
 
 	admin, err := dbclient.New(ctx, dbclient.AdminConfig(), out)
 	if err != nil {
@@ -155,31 +159,35 @@ func ProvisionDjangoEnvDirectViaTemplateDB(ctx context.Context, flowName string,
 	if err := DBMatchCheck(ctx, env, out); err != nil {
 		return env, err
 	}
-	return env, StartBackend(ctx, env, out)
+	return env, StartBackend(ctx, env, out, reservation)
 }
 
 // =================================================
 //  Helpers
 // =================================================
 
-// newEnv picks a port, names the database after it, and creates it.
-func newEnv(ctx context.Context, flowName string, out io.Writer) (*nocrud.Env, error) {
-	port, err := FindOpenPort()
+// newEnv reserves a port, names the database after it, and creates it.
+//
+// The reservation is returned still held — the caller passes it to StartBackend,
+// which releases it at the last possible moment, and should defer Release so a
+// failure part way through doesn't leave the port tied up.
+func newEnv(ctx context.Context, flowName string, out io.Writer) (*nocrud.Env, *PortReservation, error) {
+	reservation, err := ReserveOpenPort()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	env := envForPort(flowName, port)
+	env := envForPort(flowName, reservation.Port)
 
 	admin, err := dbclient.New(ctx, dbclient.AdminConfig(), out)
 	if err != nil {
-		return env, err
+		return env, reservation, err
 	}
 	env.Admin = admin
 
 	if err := admin.CreateDB(ctx, env.DBName); err != nil {
-		return env, err
+		return env, reservation, err
 	}
-	return env, nil
+	return env, reservation, nil
 }
 
 // envForPort derives a flow's environment from its port, so the database name
@@ -195,14 +203,95 @@ func envForPort(flowName string, port int) *nocrud.Env {
 	}
 }
 
-// FindOpenPort finds an available port by letting the OS assign one.
-func FindOpenPort() (int, error) {
+// PortReservation holds a port open so nothing else can take it, until the
+// backend is ready to bind it.
+//
+// Why hold it, rather than just asking for a free port and letting go? Because
+// "free a moment ago" isn't the same as "free now". Once the socket closes, the
+// OS is entitled to hand that port to anybody — another flow, or any outbound
+// connection on the machine, which draw from the same ephemeral range. In the
+// migrate path several seconds pass between choosing the port and the app
+// binding it (create DB, run migrations, check settings), and a port left
+// unheld for several seconds is a port you do not own.
+//
+// Holding it shrinks that window from seconds to the microseconds between
+// Release and the backend's bind. The residual window can't be closed from here
+// — a child process cannot inherit our binding — so AssertPortNotTaken covers
+// what's left. Both halves are needed: this one makes collisions rare, that one
+// makes the rest loud instead of silent.
+type PortReservation struct {
+	Port int
+
+	once sync.Once
+	l    net.Listener
+}
+
+// ReserveOpenPort takes a port from the OS and holds it.
+func ReserveOpenPort() (*PortReservation, error) {
 	l, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return nil, err
+	}
+	return &PortReservation{Port: l.Addr().(*net.TCPAddr).Port, l: l}, nil
+}
+
+// Release hands the port back so the backend can bind it. Idempotent, so it is
+// safe to defer as a cleanup and still release it explicitly at handover.
+func (r *PortReservation) Release() {
+	if r == nil {
+		return
+	}
+	r.once.Do(func() { _ = r.l.Close() })
+}
+
+// FindOpenPort finds an available port by letting the OS assign one.
+//
+// Deprecated: racy by construction — the port is free when this returns and may
+// not be a moment later. Kept for runners that already call it. Use
+// ReserveOpenPort for anything you intend to bind.
+func FindOpenPort() (int, error) {
+	r, err := ReserveOpenPort()
 	if err != nil {
 		return 0, err
 	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port, nil
+	r.Release()
+	return r.Port, nil
+}
+
+// PortIsAnswering reports whether anything accepts a connection on the port.
+func PortIsAnswering(port int) bool {
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)), 250*time.Millisecond)
+	if err != nil {
+		return false
+	}
+	conn.Close()
+	return true
+}
+
+// AssertPortNotTaken fails if anything is already listening on the port.
+//
+// Called immediately after the reservation is released and before the backend
+// is spawned. At that instant nothing of ours can be listening — our backend
+// does not exist yet — so anything that answers is somebody else who took the
+// port during the handover.
+//
+// This is the check that makes a lost port unambiguous. Watching our own
+// process is not enough on its own: the thief answers the readiness probe
+// instantly, while our backend is still a second away from even attempting its
+// bind, so at the moment we probe, our process is alive and everything looks
+// fine. Asking before we start removes the ambiguity entirely.
+func AssertPortNotTaken(port int) error {
+	if !PortIsAnswering(port) {
+		return nil
+	}
+	return fmt.Errorf(
+		"port %d was already taken before this flow's backend could start.\n"+
+			"The runner reserved this port and released it only to hand it over, so something "+
+			"else grabbed it in that instant — another flow, or any outbound connection on this "+
+			"machine (they draw from the same ephemeral range).\n"+
+			"This is rare and a rerun should clear it. It is reported rather than ignored "+
+			"because the alternative is running this flow against whatever else is on that "+
+			"port — a different app, and a different database.", port)
 }
 
 // RunMgmtCommandQuietly runs a manage.py command, surfacing stderr only when it
@@ -360,7 +449,16 @@ func dbMatchCheckSlow(ctx context.Context, env *nocrud.Env, out io.Writer) error
 // Its log lines go straight to the real stdout, prefixed with the port, rather
 // than into the flow's buffer — in parallel mode you want to see the backend
 // while the flow is still running, and the port says which one is talking.
-func StartBackend(ctx context.Context, env *nocrud.Env, out io.Writer) error {
+// reservation holds the port until the moment the backend takes it; pass nil if
+// the port was never reserved.
+func StartBackend(ctx context.Context, env *nocrud.Env, out io.Writer, reservation *PortReservation) error {
+	if reservation != nil {
+		reservation.Release()
+		if err := AssertPortNotTaken(env.AppPort); err != nil {
+			return err
+		}
+	}
+
 	cmd := exec.CommandContext(ctx, "python", "manage.py", "runserver", "--noreload",
 		fmt.Sprintf("0.0.0.0:%d", env.AppPort))
 	cmd.Dir = config.AppDir()
@@ -376,30 +474,100 @@ func StartBackend(ctx context.Context, env *nocrud.Env, out io.Writer) error {
 		return fmt.Errorf("starting backend on port %d: %w", env.AppPort, err)
 	}
 	env.Proc = cmd
+	env.WatchProcess()
 
+	// Kept so a backend that dies on startup can say why.
+	recent := newRingBuffer(25)
 	go func() {
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
-			fmt.Fprintf(os.Stdout, "[Django:%d] %s\n", env.AppPort, scanner.Text())
+			line := scanner.Text()
+			recent.add(line)
+			fmt.Fprintf(os.Stdout, "[Django:%d] %s\n", env.AppPort, line)
 		}
 	}()
 
-	return WaitForBackendToListen(env.AppPort, BackendStartTimeout)
+	return WaitForBackend(env, BackendStartTimeout, recent)
+}
+
+// WaitForBackend blocks until the backend is listening, or gives up the moment
+// it dies.
+//
+// A backend that exits on startup — bad settings, a missing migration, a lost
+// port — is otherwise indistinguishable from a slow one, and you wait out the
+// whole timeout to be told nothing useful.
+//
+// This does not attempt to prove the listener is ours; it can't. Something that
+// already owns the port answers instantly, while our backend is still a second
+// from its own bind, so at the moment we probe, our process is alive and all
+// looks well. AssertPortNotTaken, before the spawn, is what settles that.
+func WaitForBackend(env *nocrud.Env, timeout time.Duration, recent *ringBuffer) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if exited, waitErr := env.ProcessExited(); exited {
+			return backendDiedError(env.AppPort, waitErr, recent)
+		}
+		if PortIsAnswering(env.AppPort) {
+			return nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if exited, waitErr := env.ProcessExited(); exited {
+		return backendDiedError(env.AppPort, waitErr, recent)
+	}
+	return fmt.Errorf("timeout waiting for server to listen on port %d", env.AppPort)
 }
 
 // WaitForBackendToListen blocks until something is listening on the port.
+//
+// Deprecated: it cannot tell your backend from anyone else's, and it cannot
+// tell a dead backend from a slow one. Use WaitForBackend, which watches the
+// process too.
 func WaitForBackendToListen(port int, timeout time.Duration) error {
-	address := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		conn, err := net.DialTimeout("tcp", address, 250*time.Millisecond)
-		if err == nil {
-			conn.Close()
+		if PortIsAnswering(port) {
 			return nil
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
 	return fmt.Errorf("timeout waiting for server to listen on port %d", port)
+}
+
+func backendDiedError(port int, waitErr error, recent *ringBuffer) error {
+	tail := "(no output)"
+	if recent != nil {
+		if lines := recent.lines(); len(lines) > 0 {
+			tail = strings.Join(lines, "\n")
+		}
+	}
+	return fmt.Errorf(
+		"backend for port %d exited (%v) before it started listening.\n"+
+			"Last output from the backend:\n%s", port, waitErr, tail)
+}
+
+// ringBuffer keeps the last n lines of a process's output.
+type ringBuffer struct {
+	mu    sync.Mutex
+	n     int
+	items []string
+}
+
+func newRingBuffer(n int) *ringBuffer { return &ringBuffer{n: n} }
+
+func (r *ringBuffer) add(line string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.items = append(r.items, line)
+	if len(r.items) > r.n {
+		r.items = r.items[len(r.items)-r.n:]
+	}
+}
+
+func (r *ringBuffer) lines() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]string(nil), r.items...)
 }
 
 // CleanupEnv stops the backend and drops the database.
@@ -413,7 +581,7 @@ func CleanupEnv(ctx context.Context, env *nocrud.Env, out io.Writer) {
 	}
 
 	if env.Proc != nil && env.Proc.Process != nil {
-		if err := stopProcess(env.Proc); err != nil {
+		if err := stopProcess(env); err != nil {
 			fmt.Fprintf(out, "⚠️ Cleanup warning: stopping backend: %v\n", err)
 		}
 	}
@@ -433,24 +601,22 @@ func CleanupEnv(ctx context.Context, env *nocrud.Env, out io.Writer) {
 // stopProcess asks the backend to exit, and insists if it won't. Waiting
 // matters: the database can't be dropped while the app still holds a
 // connection to it.
-func stopProcess(cmd *exec.Cmd) error {
-	if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
-		_ = cmd.Process.Kill()
+//
+// The wait goes through env, which owns the one goroutine allowed to Wait on
+// the process — startup watches for the same exit, and two Waits on one process
+// is an error.
+func stopProcess(env *nocrud.Env) error {
+	if err := env.Proc.Process.Signal(syscall.SIGTERM); err != nil {
+		_ = env.Proc.Process.Kill()
 	}
-
-	done := make(chan error, 1)
-	go func() { done <- cmd.Wait() }()
-
-	select {
-	case <-done:
-		return nil
-	case <-time.After(5 * time.Second):
-		if err := cmd.Process.Kill(); err != nil {
-			return err
-		}
-		<-done
+	if env.WaitForExit(5 * time.Second) {
 		return nil
 	}
+	if err := env.Proc.Process.Kill(); err != nil {
+		return err
+	}
+	env.WaitForExit(5 * time.Second)
+	return nil
 }
 
 // lastLine returns the final non-empty line of output — Django likes to print

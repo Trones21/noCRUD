@@ -66,6 +66,12 @@ jobs:
           pip install -r example_app/requirements.txt
           pip install -r python/requirements.txt
 
+      - name: Runner unit tests
+        # Port reservation and backend-startup detection — no app or database
+        # needed, so this runs before anything is provisioned.
+        working-directory: python
+        run: python -m utils.provisioning_test
+
       - name: Register example flows
         # The runner (python/) is kept clean; the example flows live in
         # example-runner-files/ and are auto-registered here at run time.

@@ -4,6 +4,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections import deque
 from typing import Dict
 from utils.db_client import DBClient
 from config import APP_DIR
@@ -46,8 +47,9 @@ def provision_env_for_flow(flow_name) -> Dict:
 
 
 def provision_django_env_using_migrate(flow_name):
-    # You can derive a unique DB name and port from the flow name or hash
-    port = find_open_port()
+    # You can derive a unique DB name and port from the flow name or hash.
+    # The port stays reserved (held by port_reservation) until Django takes it.
+    port, port_reservation = reserve_open_port()
     db_name = f"noCRUD_p{port}_{flow_name}"
 
     # Update environment variables for the subprocess
@@ -77,7 +79,7 @@ def provision_django_env_using_migrate(flow_name):
     db_match_check(db_name, f"{APP_DIR}/example_app/settings.py")
 
     # start django
-    backend_proc = start_backend_subprocess(port)
+    backend_proc = start_backend_subprocess(port, port_reservation)
 
     env = {
         "DB_NAME": db_name,
@@ -90,7 +92,7 @@ def provision_django_env_using_migrate(flow_name):
 
 
 def provision_django_env_direct_via_sql(flow_name):
-    port = find_open_port()
+    port, port_reservation = reserve_open_port()
     db_name = f"noCRUD_p{port}_{flow_name}"
 
     os.environ.update(
@@ -125,7 +127,7 @@ def provision_django_env_direct_via_sql(flow_name):
     # Ensure the db we just created is the same as what settings.py will use
     db_match_check(db_name, f"{APP_DIR}/example_app/settings.py")
 
-    backend_proc = start_backend_subprocess(port)
+    backend_proc = start_backend_subprocess(port, port_reservation)
 
     return {
         "DB_NAME": db_name,
@@ -136,7 +138,7 @@ def provision_django_env_direct_via_sql(flow_name):
 
 
 def provision_django_env_direct_via_template_db(flow_name):
-    port = find_open_port()
+    port, port_reservation = reserve_open_port()
     db_name = f"noCRUD_p{port}_{flow_name}"
 
     os.environ.update(
@@ -154,7 +156,7 @@ def provision_django_env_direct_via_template_db(flow_name):
     # Ensure the db we just created is the same as what settings.py will use
     db_match_check(db_name, f"{APP_DIR}/example_app/settings.py")
 
-    backend_proc = start_backend_subprocess(port)
+    backend_proc = start_backend_subprocess(port, port_reservation)
 
     return {
         "DB_NAME": db_name,
@@ -169,11 +171,47 @@ def provision_django_env_direct_via_template_db(flow_name):
 # =================================================
 
 
+def reserve_open_port():
+    """Reserves a port and HOLDS it, returning (port, reservation_socket).
+
+    The caller must keep the returned socket open until the moment the backend
+    is ready to bind, then close it (start_backend_subprocess does this).
+
+    Why hold it, rather than just asking for a free port and letting go? Because
+    "free a moment ago" isn't the same as "free now". Once the socket closes,
+    the OS is entitled to hand that port to anybody — including another flow, or
+    any outbound connection on the machine, which draw from the same ephemeral
+    range. In the migrate path several seconds pass between choosing the port
+    and Django binding it (create DB, run migrations, check settings), and a
+    port left unheld for several seconds is a port you do not own.
+
+    Holding it shrinks that window from seconds to the microseconds between
+    close() and the backend's bind(). The residual window can't be closed from
+    here — a second process cannot inherit our binding — so
+    assert_port_not_taken checks, at handover, that nobody beat us to it. Both
+    halves are needed: this one makes collisions rare, that one makes the rest
+    loud instead of silent.
+
+    If provisioning raises before the handover, the socket is closed when the
+    frame is released rather than by an explicit finally — verified not to leak
+    on CPython. On an interpreter that doesn't refcount, it would be held until
+    the next collection, which is harmless (a held port is the safe direction).
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))  # 0 tells OS to find an available port
+    return s.getsockname()[1], s
+
+
 def find_open_port():
-    """Finds an available port by letting the OS assign one temporarily."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("", 0))  # 0 tells OS to find an available port
-        return s.getsockname()[1]
+    """Finds an available port by letting the OS assign one temporarily.
+
+    ⚠️  Racy by construction: the port is free when this returns and may not be
+    a moment later. Kept for runners that already call it. Prefer
+    reserve_open_port() for anything you intend to bind.
+    """
+    port, reservation = reserve_open_port()
+    reservation.close()
+    return port
 
 
 def run_mgmt_command_quietly(args, cwd, env):
@@ -313,7 +351,53 @@ def db_match_check_slow(db_created_by_runner):
         print(f"✅ Django is using expected DB: {db_that_backend_is_using}")
 
 
-def start_backend_subprocess(port):
+def port_is_answering(port, host="127.0.0.1", timeout=0.25):
+    """True if something accepts a connection on the port right now."""
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except (ConnectionRefusedError, OSError):
+        return False
+
+
+def assert_port_not_taken(port):
+    """Raises if anything is already listening on the port.
+
+    Called immediately after the reservation is released and before the backend
+    is spawned. At that instant nothing of ours can be listening — our backend
+    does not exist yet — so anything that answers is somebody else who took the
+    port during the handoff.
+
+    This is the check that makes a lost port unambiguous. Watching our own
+    process is not enough on its own: the thief answers the readiness probe
+    instantly, while our backend is still a second away from even attempting its
+    bind, so at the moment we probe, our process is alive and everything looks
+    fine. Asking *before* we start removes the ambiguity entirely.
+    """
+    if port_is_answering(port):
+        raise RuntimeError(
+            f"Port {port} was already taken before this flow's backend could start.\n"
+            f"The runner reserved this port and released it only to hand it over, so "
+            f"something else grabbed it in that instant — another flow, or any "
+            f"outbound connection on this machine (they draw from the same ephemeral "
+            f"range).\n"
+            f"This is rare and a rerun should clear it. It is reported rather than "
+            f"ignored because the alternative is running this flow against whatever "
+            f"else is on that port — a different app, and a different database."
+        )
+
+
+def start_backend_subprocess(port, port_reservation=None):
+    """Starts the backend on port and blocks until it is listening.
+
+    port_reservation is the socket from reserve_open_port() holding the port.
+    It is released as late as possible — the instant we let go, the port is
+    anybody's — and we check straight away that nobody took it.
+    """
+    if port_reservation is not None:
+        port_reservation.close()
+        assert_port_not_taken(port)
+
     proc = subprocess.Popen(
         ["python", "manage.py", "runserver", "--noreload", f"0.0.0.0:{port}"],
         cwd=APP_DIR,
@@ -323,24 +407,54 @@ def start_backend_subprocess(port):
         bufsize=1,
     )
 
+    # Kept so a backend that dies on startup can say why — the message we most
+    # want is Django's own "That port is already in use."
+    recent_output = deque(maxlen=25)
+
     def stream_output():
         for line in proc.stdout:
+            recent_output.append(line)
             print(f"[Django:{port}] {line}", end="", file=sys.__stdout__)
 
     threading.Thread(target=stream_output, daemon=True).start()
-    wait_for_backend_to_listen_on_port(port)
+    wait_for_backend_to_listen_on_port(port, proc=proc, recent_output=recent_output)
     return proc
 
 
-def wait_for_backend_to_listen_on_port(port, host="0.0.0.0", timeout=10):
-    """Blocks until a port is actively listening on the given host."""
+def wait_for_backend_to_listen_on_port(
+    port, host="0.0.0.0", timeout=10, proc=None, recent_output=None
+):
+    """Blocks until *our* backend is listening on the given host and port.
+
+    Pass proc to have the wait give up the moment the backend dies. Without it,
+    a backend that exits on startup — bad settings, a missing migration, a lost
+    port — is indistinguishable from a slow one, and you wait out the full
+    timeout to be told nothing useful.
+
+    Note that this check alone cannot tell you the listener is yours: something
+    that already owns the port answers immediately, while your backend is still
+    a second from its own bind. assert_port_not_taken, called before the backend
+    is spawned, is what settles that question.
+    """
+
+    def raise_if_backend_died():
+        if proc is None or proc.poll() is None:
+            return
+        tail = "".join(recent_output or []).strip()
+        raise RuntimeError(
+            f"Backend for port {port} exited with code {proc.returncode} before it "
+            f"started listening.\n"
+            f"Last output from the backend:\n{tail or '(no output)'}"
+        )
+
     deadline = time.time() + timeout
     while time.time() < deadline:
-        try:
-            with socket.create_connection((host, port), timeout=0.25):
-                return True  # Success: something is listening
-        except (ConnectionRefusedError, OSError):
-            time.sleep(0.1)
+        raise_if_backend_died()
+        if port_is_answering(port, host=host):
+            return True
+        time.sleep(0.1)
+
+    raise_if_backend_died()
     raise TimeoutError(f"Timeout waiting for server to listen on port {port}")
 
 
