@@ -2,3 +2,11 @@ sandbox
 
 # noCRUD perf: run artifacts are transient; the baseline is committed
 python/perf/runs/
+go/perf/runs/
+
+# Compiled runner binaries
+go/nocrud
+go/perfreport
+go/createcrudflow
+go/modelcoverage
+go/initdb

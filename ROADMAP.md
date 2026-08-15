@@ -63,8 +63,31 @@ configs easily. noCRUD's edge is that it reuses the *same* auth and
 dependency-aware object builders, so you can load-test an endpoint that needs a
 fully-built object graph to exist first, without re-plumbing any of it.
 
-## 4. Go runner parity
+## 4. Go runner parity — implemented
 
-The Go **runner** (`go/`) lags the Python one significantly. Separate track from
-the Go *adapter* above (which is about testing a Go backend from the Python
-runner). Goal: bring the Go runner up to feature parity with Python.
+The Go **runner** (`go/`) is now at feature parity with the Python one. Separate
+track from the Go *adapter* above (which is about testing a Go backend from the
+Python runner).
+
+- [x] CRUD flows, request flows, flow registry, `--list`
+- [x] Serial and parallel runners, with per-flow output buffering
+- [x] Per-flow app + database provisioning (migrate / schema.sql / template db),
+      DB match check, cleanup that keeps a failing flow's database
+- [x] `APIClient` with sessions and CSRF, multi-user flows, expected-failure
+      assertions
+- [x] Fixture loading, object builders, database back door
+- [x] Persisted timings + regression report, using the **same NDJSON schema and
+      op names as Python**, so a baseline is portable between the two
+- [x] The supporting scripts: `perfreport`, `createcrudflow`, `modelcoverage`,
+      `initdb`
+- [x] Test suite covering the runner itself, end to end, against a fake DRF
+      backend — no Django or postgres required to run it
+
+The design differences Go forced (a `Ctx` per flow instead of process globals,
+`init()` registration instead of a folder collector) are listed at the bottom of
+[`go/Readme.md`](./go/Readme.md).
+
+Still open:
+
+- [ ] Load/hammer mode (item 3 above) in both runners
+- [ ] A Go *adapter* — the reference for testing a Go backend (item 1 above)
