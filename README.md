@@ -79,4 +79,11 @@ Steps 2 & 3 are not completely mutually exclusive... I like to print a few speci
 
 ## Status
 
-See the readme in the individual implementation folders (python, go) for implementation specific status.
+Two complete implementations, at feature parity with each other:
+
+- [`python/`](./python/) — [readme](./python/docs/README.md)
+- [`go/`](./go/) — [readme](./go/Readme.md)
+
+They write timings in the same format, so a perf baseline captured by one can be
+compared by the other. See the readme in the individual implementation folders
+for implementation specific detail.

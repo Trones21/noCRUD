@@ -1,0 +1,71 @@
+# CI for the Go runner: build it, vet it, and run its own test suite.
+#
+# The suite covers the runner end to end against a fake DRF backend, so most of
+# it needs nothing but Go. A postgres service is provided so the dbclient tests
+# run for real rather than skipping themselves.
+#
+# The example flows live in example-runner-files/ to keep go/flows/ clean, the
+# same way the Python workflow handles them — so they get copied in here, which
+# also proves they still compile against the runner.
+
+name: go-runner
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+
+    defaults:
+      run:
+        working-directory: go
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache-dependency-path: go/go.sum
+
+      - name: Copy in the example flows
+        run: cp ../example-runner-files/go/flows/*.go ./flows/
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Check formatting
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+      - name: Test
+        run: go test -race ./...
+
+      - name: Flows are registered
+        run: go run ./cmd/nocrud -l

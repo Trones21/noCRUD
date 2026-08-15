@@ -1,11 +1,16 @@
 ### Directory Structure
 
-| Directory         | Description / Status                                                                                                               |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `python/`         | Python Implementation - **Serial version complete, currently working on parallelization**                                          |
-| `go/`             | Go Implementation - **Super Basic - still playing around with the patterns, not as feature complete as the python implementation** |
-| `example-app/`    | Example Application for running tests against                                                                                      |
-| `example-runner/` | This is what your runner will look like after you start building it out a bit.                                                     |
+| Directory         | Description / Status                                                                            |
+| ----------------- | ----------------------------------------------------------------------------------------------- |
+| `python/`         | Python Implementation - **Complete** (serial + parallel)                                         |
+| `go/`             | Go Implementation - **Complete, at parity with Python.** See [`go/Readme.md`](./go/Readme.md)    |
+| `example-app/`    | Example Application for running tests against                                                    |
+| `example-runner/` | This is what your runner will look like after you start building it out a bit.                   |
+
+Both implementations do the same things — CRUD checks, multi-user request flows,
+per-flow isolated provisioning, parallel runs, persisted timings — and their perf
+files use the same schema, so a baseline captured by one can be compared by the
+other. Pick by what your team writes; the flows read about the same in either.
 
 ### Using this Tool
 
