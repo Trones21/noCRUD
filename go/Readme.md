@@ -1,64 +1,115 @@
-# noCRUD — Go implementation
+# noCRUD — Go runner
 
-A complete Go runner: CRUD checks, multi-user request flows, per-flow isolated
-app + database provisioning, parallel execution, and persisted request timings
-with regression comparison.
+At parity with the Python runner: CRUD checks, multi-user business-logic flows,
+an isolated database and backend per flow, parallel runs, and persisted request
+timings. The perf files use the same schema and the same op names as the Python
+runner, so a baseline captured by either can be compared by the other.
 
-**Status: at parity with the Python runner.** Everything `python/` does, this
-does. The differences that remain are the ones Go forces (see
-[Differences from the Python runner](#differences-from-the-python-runner)); none
-of them lose a feature.
+Pick the implementation your team would rather write flows in. The flows read
+about the same either way; what differs is underneath (see
+[Differences from the Python runner](#differences-from-the-python-runner)).
+
+## Quick start, against the bundled example_app
+
+The example app is Django, so its dependencies come first:
 
 ```bash
-cd go
-go run ./cmd/nocrud -l          # what's registered
-go run ./cmd/nocrud -crud       # run every CRUD flow, in parallel
-go run ./cmd/nocrud -f actor -s # one flow, against an app you started
-go test ./...                   # the runner's own tests
+python -m venv .venv && source .venv/bin/activate
+pip install -r ../example_app/requirements.txt
 ```
 
-Requires Go 1.24+ and a reachable postgres. The only dependency is
-[pgx](https://github.com/jackc/pgx) (what `psycopg` is to the Python runner).
+Point the runner at a postgres it can create databases in, and give Django its
+key:
 
----
+```bash
+export DB_USER=postgres DB_PASS=postgres DB_HOST=localhost DB_PORT=5432
+export DJANGO_KEY=dev-insecure-key
+```
+
+The example flows live outside the runner so `flows/` stays yours. Copy them in:
+
+```bash
+cp ../example-runner-files/go/flows/*.go ./flows/
+go run ./cmd/nocrud -l          # confirm they registered
+go run ./cmd/nocrud -coll       # run every one of them
+```
+
+Nothing else to start. In the default parallel mode each flow provisions its own
+database and its own backend, runs, and tears both down again:
+
+```
+actor                        : C:✔ R:✔ U:✔ D:✔
+character                    : C:✔ R:✔ U:✔ D:✔
+pitch                        : C:✔ R:✔ U:✔ D:✔
+pitch_lock_after_interactions: pitch locked after interaction, as expected
+production                   : C:✔ R:✔ U:✔ D:✔
+seed_pitches                 : seeded 5 pitches (with their characters, productions and universes)
+universe                     : C:✔ R:✔ U:✔ D:✔
+users                        : C:✔ R:✔ U:✔ D:✔
+vote                         : C:✔ R:✔ U:✔ D:✔
+```
 
 ## Layout
 
-Same shape as `python/`, so the two can be read side by side.
+| Path                  | What it is                                                          |
+| --------------------- | ------------------------------------------------------------------- |
+| `nocrud/`             | The vocabulary flows are written in: `Flow`, `Ctx`, `Env`, the registry, `Must` / `ExpectFail` / `ExpectStatus` |
+| `flows/`              | **Yours.** Ships empty; flow files register themselves from `init()` |
+| `runners/`            | Executes flows, serial or parallel, and prints the summary          |
+| `config/`             | The one package to edit when dropping this next to your own app     |
+| `utils/apiclient/`    | Talks to the backend the way your frontend does. One client per user |
+| `utils/crud/`         | The create → read → update → delete check                           |
+| `utils/provisioning/` | Per-flow database and backend. **The framework-specific part**      |
+| `utils/dbclient/`     | Postgres: create, drop, clear, reset, load fixtures                 |
+| `utils/fixtures/`     | Reads the app's fixture json                                        |
+| `utils/perf/`         | Records and compares request timings                                |
+| `utils/jsonx/`        | Path-addressed JSON (`res.Get("results.0.id")`) without ceremony    |
+| `cmd/`                | The commands below                                                  |
 
-| Go                             | Python                       | What it is                                       |
-| ------------------------------ | ---------------------------- | ------------------------------------------------ |
-| `cmd/nocrud/`                  | `noCRUD.py`                  | Entry point: flags, flow selection, summary       |
-| `cmd/perfreport/`              | `perf_report.py`             | Timing comparison and baselines                   |
-| `cmd/createcrudflow/`          | `create_crud_flow.py`        | Generates a CRUD flow file                        |
-| `cmd/modelcoverage/`           | `model_coverage_check.py`    | Which models have no flow                         |
-| `cmd/initdb/`                  | `init_db.py`                 | Create a database named by `DB_NAME`              |
-| `config/`                      | `config.py`                  | Where your app and fixtures live                  |
-| `nocrud/`                      | —                            | `Ctx`, `Env`, flow registry, `Must`, assertions   |
-| `runners/`                     | `runners/`                   | Serial and parallel execution                     |
-| `utils/apiclient/`             | `utils/api_client.py`        | One logged-in user's HTTP session                 |
-| `utils/crud/`                  | `utils/crud.py`              | The create/read/update/delete check               |
-| `utils/dbclient/`              | `utils/db_client.py`         | Database back door                                |
-| `utils/fixtures/`              | `utils/fixtures.py`          | Reading the app's test data                       |
-| `utils/perf/`                  | `utils/perf.py`              | Persisted request timings                         |
-| `utils/printing/`              | `utils/printing.py`          | Output formatting                                 |
-| `utils/provisioning/`          | `utils/provisioning.py`      | Per-flow app + database                           |
-| `utils/jsonx/`                 | — (Python has dicts)         | Ergonomic access to decoded JSON                  |
-| `flows/`                       | `flows/`                     | **Your flows.** Ships empty on purpose.           |
+## Commands
 
----
+```bash
+go run ./cmd/nocrud          # the runner
+go run ./cmd/modelcoverage   # which models have a CRUD flow and which don't
+go run ./cmd/createcrudflow  # generate a CRUD flow file
+go run ./cmd/perfreport      # compare a run against the baseline, or set one
+go run ./cmd/initdb          # create and migrate a database
+```
+
+### Runner flags
+
+| Flag                        | Effect                                                     |
+| --------------------------- | ---------------------------------------------------------- |
+| `-f`, `--flows`             | Run named flows. Repeat the flag or comma-separate          |
+| `-crud`                     | Run every CRUD flow                                         |
+| `-req`, `--request_flows`   | Run every request flow                                      |
+| `-coll`, `--collected`      | Run everything registered                                   |
+| `-l`, `--list`              | List registered flows and exit                              |
+| `-s`, `--serial`            | Run against a backend you started yourself, printing live   |
+| `-j`, `--jobs`              | Max flows at once in parallel mode (default GOMAXPROCS)     |
+| `--perf`                    | Persist timings and compare against the baseline            |
+| `--threshold`, `--metric`   | Regression gate: percent, and `mean` / `p95` / `p99`        |
+
+One of `-f`, `-crud`, `-req`, `-coll` or `-l` is required — there is no default
+that runs something you didn't ask for.
+
+`-j` caps concurrency for the sake of the *backend and database*, not the
+runner. Flows are goroutines here, so the runner itself is nearly free; each
+concurrent flow is another app process and another database, and that is what a
+small box runs out of.
 
 ## Writing a flow
 
-A flow is a function that gets a `*nocrud.Ctx` and returns whatever belongs in
-the summary. It registers itself from `init()`, so adding a file to the `flows`
-package is the whole of the wiring — the Go equivalent of the Python runner's
-folder collector.
-
-A CRUD flow for an object with no dependencies:
+A flow is a function and an `init()` that registers it. Drop the file in
+`flows/` and there is nothing else to wire up:
 
 ```go
 package flows
+
+import (
+	"github.com/Trones21/noCRUD/go/nocrud"
+	"github.com/Trones21/noCRUD/go/utils/crud"
+)
 
 func init() { nocrud.RegisterCRUD("actor", crudActorFlow) }
 
@@ -67,7 +118,6 @@ func crudActorFlow(c *nocrud.Ctx) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return crud.Exec(c, api, "actor",
 		crud.SimpleCreate("actor", "actors.json", 0, "id"),
 		crud.UpdateDetails{Field: "first_name", NewValue: "Bill"},
@@ -75,238 +125,112 @@ func crudActorFlow(c *nocrud.Ctx) (any, error) {
 }
 ```
 
-`c.Setup()` resets the data to the minimal fixtures and returns a client logged
-in as the first fixture user — the counterpart of `utils/common.py`'s `setup()`.
+`c.Setup()` clears the database to a known state and hands back a logged-in
+client. `crud.Exec` runs all four operations and reports them as one line.
 
-### Objects that need other objects first
-
-Creating the object is the part that varies, so it's a function
-(`crud.CreateFunc`). A create function that builds a dependency chain is
-reusable: other flows call it instead of inventing their own graph, and nothing
-hardcodes an id.
+The more valuable flows are the ones a CRUD check can't reach — a rule that only
+exists in the interaction between two users:
 
 ```go
-func createProduction(c *nocrud.Ctx, api *apiclient.Client) (jsonx.Value, error) {
-	universeID, err := createUniverse(c, api) // → the flow one level down
-	if err != nil {
-		return universeID, err
-	}
-
-	obj, err := fixtures.GetByIndex("productions.json", 0)
-	if err != nil {
-		return jsonx.Invalid(err), err
-	}
-	obj["universe"] = universeID.Raw()
-
-	res, err := api.CreateObject("production", obj)
-	if err != nil {
-		return res, err
-	}
-	return crud.ID(res, "production", "id")
+func init() {
+	nocrud.Register(nocrud.Flow{
+		Name: "pitch_lock_after_interactions",
+		Kind: nocrud.Request,
+		Doc:  "A pitch cannot be edited once someone has commented on it",
+		Fn:   pitchLockAfterInteractionsFlow,
+	})
 }
 ```
 
-The same functions seed a database — see `seed_pitches.go` in the examples.
+Inside, `c.NewRandomUserClient()` gets you a second user with their own session,
+and the expectation helpers say what should happen:
 
-### Multi-user flows
+- `nocrud.Must(v, err)` — fail the flow here. For the setup steps, so the object
+  graph a rule needs doesn't bury the rule under error handling.
+- `nocrud.ExpectFail(c, "editing a locked pitch", fn)` — assert something is
+  refused, without pinning the status.
+- `nocrud.ExpectStatus(c, "another user editing it", 403, fn)` — assert *which*
+  refusal. Prefer this when you know the right status; it catches a rule enforced
+  in the wrong layer (a 500 where a 403 belongs, a 404 hiding a 403).
 
-Each `*apiclient.Client` is one user with its own cookie jar, so a multi-user
-flow is just several of them:
+One caution worth internalising, because it is the easy way to write a flow that
+passes for the wrong reason: `ExpectFail` accepts *any* failure. If you PUT a
+partial body to assert a permission rule, the request fails validation for the
+fields you left out and never reaches the rule — and the flow would pass against
+a backend with no rule at all. PATCH the one field you mean to change.
 
-```go
-author, _ := c.Setup()                  // fixture user
-critic, _ := c.NewRandomUserClient()    // a brand new registered user
+## Adapting it to your own backend
 
-pitch := nocrud.Must(author.CreateObject("pitch", body))
-nocrud.Must(critic.CreateObject("pitch_comment", comment))
+Everything above `utils/provisioning` is plain HTTP and framework-agnostic.
+Three things are not:
 
-// Half of what a flow proves is that the backend says no at the right moment.
-err := nocrud.ExpectStatus(c, "editing a locked pitch", 403, func() error {
-	_, err := author.UpdateObjectByID("pitch", pitch.Get("id").ID(), edit)
-	return err
-})
-```
+| Concern         | Where                              | What to change                                              |
+| --------------- | ---------------------------------- | ----------------------------------------------------------- |
+| Auth handshake  | `utils/apiclient/apiclient.go`     | `Login` — token vs session, header names, the login path     |
+| DB provisioning | `utils/provisioning/provisioning.go` | Your migration tool instead of `manage.py migrate`         |
+| Starting the app| `utils/provisioning/provisioning.go` | Your run command instead of `manage.py runserver`          |
 
-`nocrud.ExpectFail` is the looser form, when any failure will do.
+`Login` is the one almost every project has to touch. That is the point of
+shipping source rather than a library: open the file and make it do what your
+backend expects.
 
-### Errors: return them, or `Must` them
+Django is what's implemented today. Three provisioning strategies are built in,
+selected with `NOCRUD_PROVISION`:
 
-A Python flow lets exceptions fly and the runner turns them into a traceback and
-a red mark. `(value, error)` on every step is the Go way, but it doubles the
-length of a flow that has nothing useful to do with the error.
-
-`nocrud.Must` gives you the Python ergonomics without giving up Go's: it panics
-with the error, the runner recovers it, and the flow reads as one line per step.
-Handle errors normally where the flow actually branches on them.
-
-```go
-pitch := nocrud.Must(author.CreateObject("pitch", body))
-```
-
-Either way the flow is reported as failed, with a stack trace — and an accidental
-panic (nil map, index out of range) is caught too, so one bad flow never takes
-the run down with it.
-
----
-
-## Running
-
-```bash
-go run ./cmd/nocrud -crud                 # every CRUD flow
-go run ./cmd/nocrud -req                  # every request flow
-go run ./cmd/nocrud -coll                 # everything registered
-go run ./cmd/nocrud -f actor -f universe  # named flows (or -f actor,universe)
-go run ./cmd/nocrud -l                    # list without running
-```
-
-| Flag                       | Meaning                                                        |
-| -------------------------- | -------------------------------------------------------------- |
-| `-s`, `--serial`           | Run serially against an app you started yourself                |
-| `--perf`                   | Persist timings and compare them against the baseline           |
-| `-j`, `--jobs`             | Max flows at once in parallel mode (default `GOMAXPROCS`)       |
-| `--threshold`, `--metric`  | Passed to the end-of-run perf comparison                        |
-
-The runner exits non-zero if any flow failed, so it gates CI directly.
-
-### Parallel (default)
-
-Each flow gets its own database and its own backend on its own port. You don't
-start anything yourself.
-
-```text
-             ┌───────────────────┐     ┌──────────────────┐
-        -->  │ App :1 Port 8001  │ --> │ DB: noCRUD_p8001 │
-       /     ├───────────────────┤     ├──────────────────┤
-Runner --->  │ App :2 Port 8002  │ --> │ DB: noCRUD_p8002 │
-       \     ├───────────────────┤     ├──────────────────┤
-        -->  │ App :3 Port 8003  │ --> │ DB: noCRUD_p8003 │
-             └───────────────────┘     └──────────────────┘
-```
-
-Each flow's output is buffered and printed in one piece, so the logs don't
-interleave. The backend's own log lines go straight to the terminal as they
-happen, prefixed with the port.
-
-A flow that fails keeps its database, so there's something left to inspect.
-Clean them up with `python/drop_dbs_by_pattern.sh`.
-
-Which provisioning method runs is set by `NOCRUD_PROVISION`:
-
-| Value               | How the schema gets in       | Setup needed                       |
-| ------------------- | ---------------------------- | ---------------------------------- |
-| `migrate` (default) | `manage.py migrate`          | none                               |
-| `sql`               | `psql -f schema.sql`         | keep `schema.sql` current          |
-| `template`          | `createdb -T <template>`     | build the template before the run  |
-
-If your backend isn't Django, `ProvisionEnvForFlow` in
-`utils/provisioning/provisioning.go` is the only thing to replace — everything
-above it is framework-agnostic HTTP.
-
-### Serial
-
-Start the app yourself, then:
-
-```bash
-source ../example_app/backend_env.sh
-go run ./cmd/nocrud -crud --serial
-```
-
-Serial mode resets the database the app is already using, and prints in real
-time.
-
----
+| Value                 | How the schema gets there    | Trade                                |
+| --------------------- | ---------------------------- | ------------------------------------ |
+| `migrate` *(default)* | `manage.py migrate`          | Slowest, but needs no setup          |
+| `sql`                 | `psql -f schema.sql`         | Faster; keep `schema.sql` current    |
+| `template`            | `createdb -T <template>`     | Fastest; build the template first    |
 
 ## Configuration
 
-`config/` resolves everything, and each value has an environment override:
+Everything resolves from the environment, so the same binary works from a shell,
+from CI and from an editor without edits. Defaults are in `config/config.go`.
 
-| Variable                | Default                                | What it is                    |
-| ----------------------- | -------------------------------------- | ----------------------------- |
-| `NOCRUD_RUNNER_DIR`     | nearest directory with a `go.mod`       | where `perf/` is written      |
-| `NOCRUD_APP_DIR`        | `<runner>/../example_app`               | the app under test            |
-| `NOCRUD_FIXTURES_PATH`  | `<app>/api/fixtures`                    | the fixture json              |
-| `NOCRUD_SETTINGS_PATH`  | `<app>/<app>/settings.py`               | for the DB match check        |
-| `NOCRUD_PROVISION`      | `migrate`                               | provisioning method           |
+| Variable                | Default                        | What                              |
+| ----------------------- | ------------------------------ | --------------------------------- |
+| `NOCRUD_APP_DIR`        | `../example_app`               | Root of the app under test        |
+| `NOCRUD_FIXTURES_PATH`  | `<app>/api/fixtures`           | Fixture json                      |
+| `NOCRUD_RUNNER_DIR`     | discovered via `go.mod`        | Where `perf/` is written          |
+| `NOCRUD_SETTINGS_PATH`  | `<app>/<app>/settings.py`      | For the DB match check            |
+| `NOCRUD_PROVISION`      | `migrate`                      | `migrate` / `sql` / `template`    |
+| `NOCRUD_TEMPLATE_DB`    | `template_db`                  | Template mode only                |
+| `DB_NAME` … `DB_PORT`   | `postgres` / `localhost` / `5432` | Connection, as the app reads it |
+| `APP_PORT`              | `8000`                         | Serial mode only                  |
 
-The database connection comes from the same variables the app uses: `DB_NAME`,
-`DB_USER`, `DB_PASS`, `DB_HOST`, `DB_PORT`.
-
----
-
-## Timings and regressions
-
-Identical to the Python feature, and **interchangeable with it**: same NDJSON
-schema, same run layout, same operation names. A baseline captured by either
-runner can be compared by the other, including with `python/perf_report.py`.
-
-```bash
-go run ./cmd/nocrud -crud --perf        # collect, and print the diff
-go run ./cmd/perfreport --metric p95    # gate on the tail instead of the mean
-go run ./cmd/perfreport --set-baseline  # promote this run
-```
-
-See [`python/docs/PERF.md`](../python/docs/PERF.md) — all of it applies here.
-
----
+A compiled binary can be invoked from anywhere, so unlike Python — which leans
+on `__file__` — the runner directory has to be discovered by walking up to the
+`go.mod`, or set with `NOCRUD_RUNNER_DIR`.
 
 ## Differences from the Python runner
 
-Same features throughout. These are the places Go forced a different shape, and
-what each one buys.
+Same behaviour, different mechanics. Worth knowing when reading the source:
 
-**Flows take a `*nocrud.Ctx`.** The Python runner isolates flows with
-processes, so a flow can read `os.environ["APP_PORT"]` and print to stdout and
-still be talking about its own backend. Go runs flows as goroutines in one
-process, where those globals are shared — so everything per-flow (which port to
-call, which database to reset, where output goes, where timings are collected)
-travels in a `Ctx`. That is what makes `-j` possible at all, and it means
-provisioning never mutates the process environment.
+- **Parallelism is goroutines, not processes.** Python uses a
+  `multiprocessing.Pool`; here the runner is nearly free and the concurrency
+  limit exists to protect the backend and database.
+- **Per-flow state is passed, not global.** Python can keep the port, the output
+  stream and the perf collector in `os.environ` and module globals because each
+  flow is its own process. Goroutines share those, so they live on `Ctx` and
+  `Env` instead, and `Env.Environ()` converts back into real environment
+  variables for the subprocesses that still read them.
+- **`Must` stands in for a bare exception.** A Python flow fails by letting an
+  exception escape. `Must` panics with a `*FlowPanic`, which the runner unwraps
+  so it reports as a plain failure — while an accidental panic still gets its
+  stack trace.
+- **Output is buffered in parallel mode.** Each flow's log is printed in one
+  piece when it finishes, so concurrent flows don't interleave. Print through
+  `c.Printf`, not `fmt.Println`, or it lands out of order on the terminal.
 
-**Registration is always explicit.** Go has no runtime import, so there is no
-folder collector. An `init()` in the flow's own file does the same job with the
-same amount of typing — and a duplicate flow name panics at startup rather than
-silently shadowing.
-
-**Flags come before positional arguments** in `createcrudflow`, and `-f` is
-repeated or comma-separated rather than variadic. Go's `flag` package stops
-parsing at the first non-flag argument.
-
-**`-coll`/`--collected` runs everything registered.** With no collector there is
-no manual/collected split to preserve; `-crud` and `-req` still select by kind.
-
-**Failures come back as errors, not exit calls.** Where the Python
-`verifyAllTablesCleared` calls `sys.exit(1)`, the Go one returns an error, so
-the failure is attributed to the flow that caused it while the others carry on.
-
-**A flow that returns nothing prints `ok`** rather than `None`.
-
-**`jsonx.Value` wraps decoded JSON.** `res["results"][0]["id"]` is one
-expression in Python and a pile of type assertions in Go;
-`res.Get("results.0.id").ID()` is the one-liner back. Lookups never panic.
-
----
-
-## Tests
+## Testing the runner itself
 
 ```bash
-go test ./...          # unit + end-to-end, no backend needed
-go test -race ./...
+go test ./...
 ```
 
-The suite runs the whole stack — registry, runner, context, API client, CRUD
-helpers, perf collection, summary — against a fake DRF backend
-(`internal/testutil`) that enforces CSRF and session auth the way the real one
-does. The database tests skip themselves when there's no postgres to talk to.
-
----
-
-## Examples
-
-Ready-made flows for the bundled `example_app` are in
-[`example-runner-files/go/flows/`](../example-runner-files/go/flows/). Copy them
-in and run:
-
-```bash
-cp ../example-runner-files/go/flows/*.go ./flows/
-go run ./cmd/nocrud -l
-```
+The suite covers the runner end to end against a fake DRF backend in
+`internal/testutil` — registry, runner, context, API client, CRUD helpers, perf
+collection and the summary. Only provisioning needs the real thing. The dbclient
+tests use postgres when one is reachable and skip themselves when it isn't, so
+`go test ./...` is green either way — CI provides one so they actually run.

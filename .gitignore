@@ -4,9 +4,18 @@ sandbox
 python/perf/runs/
 go/perf/runs/
 
-# Compiled runner binaries
-go/nocrud
-go/perfreport
-go/createcrudflow
-go/modelcoverage
-go/initdb
+# Compiled runner binaries. `go build ./cmd/<x>` drops the binary in the working
+# directory under the command's own name.
+#
+# A gitignore pattern cannot say "the file, not the directory", and go/nocrud is
+# both — the binary AND the core package. Without the negation below, the
+# package source is silently never staged and the runner does not build from a
+# clean checkout. The other four are only ever binaries (their sources live in
+# go/cmd/), and these patterns are anchored to the repo root, so go/cmd/nocrud
+# is unaffected either way.
+/go/nocrud
+!/go/nocrud/
+/go/perfreport
+/go/createcrudflow
+/go/modelcoverage
+/go/initdb
