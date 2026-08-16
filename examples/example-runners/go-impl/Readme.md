@@ -1,13 +1,13 @@
 # Example flows — Go runner
 
-Flows that run against the bundled `example_app`. Unlike the Python examples in
-the folder above, these are **not** intentionally broken: the import paths are
-already correct, they just aren't part of the module until you copy them in.
+Flows that run against the bundled `example_app`. Unlike the Python examples in the
+sibling `python-impl/`, these are **not** intentionally broken: the import paths
+are already correct, they just are not part of the Go module until you copy them in — which is why your editor flags them as unresolvable in place.
 
 All commands assume your `pwd` is the noCRUD project root.
 
 ```bash
-cp ./example-runner-files/go/flows/*.go ./go/flows/
+cp ./examples/example-runners/go-impl/flows/*.go ./go/flows/
 cd go
 go run ./cmd/nocrud -l      # confirm they registered
 go run ./cmd/nocrud -crud   # run them
@@ -36,9 +36,9 @@ bundled example app the defaults are already right; you only need the database
 variables:
 
 ```bash
-source ./example_app/backend_env.sh
+source ./examples/example_app/backend_env.sh
 ```
 
 Parallel mode (the default) provisions an app and a database per flow, so
 there's nothing to start. For serial mode, start `example_app` yourself first —
-see [`go/Readme.md`](../../go/Readme.md).
+see [`go/Readme.md`](../../../go/Readme.md).

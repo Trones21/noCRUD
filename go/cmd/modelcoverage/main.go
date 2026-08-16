@@ -1,7 +1,7 @@
 // Command modelcoverage reports which of the app's models have a flow — the Go
 // counterpart of python/model_coverage_check.py.
 //
-//	go run ./cmd/modelcoverage -models ../example_app/api/models
+//	go run ./cmd/modelcoverage -models ../examples/example_app/api/models
 //
 // Where the Python version compares model names against the *filenames* in
 // flows/crud/, this one compares them against the flows that actually

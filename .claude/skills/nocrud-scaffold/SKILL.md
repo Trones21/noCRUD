@@ -20,22 +20,52 @@ framework-specific, and they are isolated in the [Framework Adapter](#framework-
 section: provisioning an isolated database per flow, starting the application,
 and the authentication handshake. Everything else is HTTP.
 
-This skill supersedes `python/create_crud_flow.py` (a pre-agentic template
-generator). Do the comprehension it couldn't: read the backend, infer the
-fields / dependencies / rules, and write the flows yourself.
+This skill supersedes the template generators that ship with each runner
+(`python/create_crud_flow.py`, `go/cmd/createcrudflow`) — both pre-agentic. Do
+the comprehension they couldn't: read the backend, infer the fields /
+dependencies / rules, and write the flows yourself.
 
 ## Before you start
 
+- **Ask which runner to scaffold: Go or Python.** Both are complete and at
+  parity — see [Choosing the runner](#choosing-the-runner). Ask before
+  generating anything; it changes every file you are about to write.
 - Confirm noCRUD lives **alongside** the target project (sibling directories),
   and identify which directory is the backend to test.
 - Confirm the backend's framework. **Django/DRF is the only framework with a
   working adapter today** (see the table below). For anything else, tell the
   user what's missing before proceeding — you can still generate flows, but the
   DB-provisioning and app-startup pieces will need to be written.
-- Read `USAGE.md` and `example-runner-files/Readme.md` in the noCRUD repo for
+- Read `USAGE.md` and `examples/example-runners/Readme.md` in the noCRUD repo for
   the runner's conventions before generating anything.
 - **Do not auto-run the flows.** Generate, report, and *offer* to run them. Only
   run if the user asks.
+
+## Choosing the runner
+
+`python/` and `go/` are both complete and do the same things — CRUD checks,
+multi-user business-logic flows, per-flow isolated provisioning, parallel runs,
+persisted timings. Their perf files share a schema and op names, so a baseline
+captured by one can be compared by the other. Ask the user which they want.
+
+**The backend's language is not the answer.** noCRUD speaks HTTP, so either
+runner tests either backend — the Python runner against a Go API is a perfectly
+normal setup. What should decide it is which language the *team will write and
+maintain flows in*, since the flows are the thing they'll live with. Say this
+when you ask, because "my backend is Go, so use the Go runner" is the assumption
+people arrive with.
+
+Tiebreakers if they have no preference:
+
+- **Python** is the older implementation and the one the docs lead with. Prefer
+  it if the team is not already fluent in Go.
+- **Go** gives flows-as-goroutines rather than processes, so parallel runs cost
+  the runner almost nothing, and it produces a single static binary — worth
+  something in CI. Registration is automatic (`init()`), so there is no
+  central list to keep in sync.
+
+Once chosen, everything below has a per-runner form. Read the chosen runner's
+`Readme.md` (`go/Readme.md` or `python/docs/README.md`) before generating.
 
 ## Phase 1 — Discover the backend
 
@@ -67,48 +97,88 @@ Write the merged inventory to a scratch markdown and show the user.
 
 ## Phase 2 — Wire noCRUD into place
 
-- Copy the `python/` runner to where the user wants it, or point config at it.
-- Set `config.py`: `APP_DIR` (path to the app) and `FIXTURES_PATH`.
-- **Adapt `utils/api_client.py::APIClient` to the project's auth.** The bundled
-  one assumes Django session + CSRF via `/api/login/`. Match the project's real
-  login endpoint, token vs. session, and header format. USAGE.md flags this as
-  the expected per-project customization — it is the one piece you almost always
-  must edit.
+Copy the chosen runner (`python/` or `go/`) to where the user wants it, or point
+its config at the app in place. Then, per runner:
+
+| Step        | Python                                        | Go                                                        |
+| ----------- | --------------------------------------------- | --------------------------------------------------------- |
+| Config      | `config.py`: `APP_DIR`, `FIXTURES_PATH`       | `config/config.go`, or the `NOCRUD_APP_DIR` / `NOCRUD_FIXTURES_PATH` env vars |
+| Auth        | `utils/api_client.py::APIClient.login`        | `utils/apiclient/apiclient.go::Client.Login`               |
+| Flows go in | `flows/`                                      | `flows/`                                                   |
+
+**Adapting the auth handshake is the one piece you almost always must edit.**
+Both bundled clients assume Django session + CSRF via `/api/login/`. Match the
+project's real login endpoint, token vs. session, and header format. USAGE.md
+flags this as the expected per-project customization.
+
+If the runner was copied out of the noCRUD repo, note that the Go module path
+travels with it: either keep the module name and import paths as they are, or
+rename the module in `go.mod` and update imports to match. Mismatched import
+paths are the first thing that breaks a copied Go runner.
 
 ## Phase 3 — Generate flows
 
-For each endpoint in the route inventory:
+For each endpoint in the route inventory, generate a **CRUD flow**, a
+dependency-aware **fixture** so the object actually validates, and its
+**registration**. Reuse the create function of each dependency rather than
+hardcoding IDs — that is what makes them reusable as object builders. Infer a
+sensible update field/value from the schema; don't ask.
 
-- **CRUD flow** — `flows/crud/<model>.py` with a `crud()` that calls
-  `crud_exec(endpoint, api, create, update_details)`. Use `simple_create` when
-  the object has no dependencies; write a custom `create` when it does. Infer a
-  sensible `UpdateDetails` field/value from the schema — don't ask.
-- **Fixture** — a dependency-aware fixture so the object actually validates.
-  Reuse the `create()` flows of dependencies rather than hardcoding IDs.
-- **Registration** — add the flow to `CRUD_FLOWS` in `noCRUD.py`, or use
-  auto-registration (see `example-runner-files/auto_registered/`).
+| Piece        | Python                                                             | Go                                                                    |
+| ------------ | ------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| File         | `flows/crud/<model>.py`, defining `crud()`                          | `flows/<model>.go`                                                     |
+| Entry point  | `crud_exec(endpoint, api, create, update_details)`                  | `crud.Exec(c, api, endpoint, create, crud.UpdateDetails{...})`         |
+| No-dep create| `simple_create`                                                     | `crud.SimpleCreate(endpoint, fixture, index, "id")`                    |
+| Setup        | `setup()` from `utils/common.py`                                    | `c.Setup()`                                                            |
+| Registration | Add to `CRUD_FLOWS` in `noCRUD.py`, or auto-register (see `examples/example-runners/python-impl/auto_registered/`) | `func init() { nocrud.RegisterCRUD("<model>", crud<Model>Flow) }` — automatic, no central list |
 
-For the rules inventory, generate **business-logic flows** under
-`flows/confirm-business-logic/`: multi-endpoint, often multi-user sequences that
-assert a rule and its expected failures — e.g. create as user A → read as user B
-expect 403 → grant permission as A → read as B expect 200. Build extra API
-clients with different user creds (see `new_api_client_*` in `api_client.py`).
-Register these in `REQUEST_FLOWS`. This is the highest-value output and the part
-a template generator never could produce — bias toward covering the real rules,
-not just happy-path CRUD.
+Working examples of every one of these live in `examples/example-runners/` —
+`python-impl/` and `go-impl/`. Read the ones matching the chosen runner before
+writing your own.
 
-Match the existing runner idioms: assertions raise (a raised exception stops the
-flow and is the failure signal — see `crud_exec`), and request timings are
-printed automatically via the `@with_perf` decorators on `APIClient`.
+For the rules inventory, generate **business-logic flows**: multi-endpoint,
+often multi-user sequences that assert a rule and its expected failures — e.g.
+create as user A → read as user B expect 403 → grant permission as A → read as B
+expect 200. This is the highest-value output and the part a template generator
+never could produce — bias toward covering the real rules, not just happy-path
+CRUD.
+
+| Piece            | Python                                              | Go                                                                |
+| ---------------- | --------------------------------------------------- | ----------------------------------------------------------------- |
+| File             | `flows/confirm-business-logic/<rule>.py`            | `flows/<rule>.go`                                                  |
+| Registration     | `REQUEST_FLOWS`                                     | `nocrud.Register(nocrud.Flow{Kind: nocrud.Request, Doc: "...", ...})` |
+| A second user    | `new_api_client_*` in `api_client.py`               | `c.NewRandomUserClient()`                                          |
+| Failure signal   | Let the exception raise                             | Return the error, or `nocrud.Must(v, err)` for setup steps         |
+| Expected failure | Assert on the raised status                         | `nocrud.ExpectStatus(c, desc, 403, fn)` / `nocrud.ExpectFail(c, desc, fn)` |
+
+Request timings are collected automatically in both — `@with_perf` decorators on
+the Python `APIClient`, and inside the Go client's request path.
+
+**Assert the rule, not a technicality.** The trap, and it produces a flow that
+passes while proving nothing: to test that an edit is refused, send only the
+field being changed — PATCH, not PUT. A PUT with a partial body is rejected for
+the fields it *left out*, so the request fails validation before the rule is
+ever consulted, and the flow would pass just as green against a backend with no
+rule at all. This is a real bug that shipped in the bundled examples. Prefer
+`ExpectStatus` over `ExpectFail` wherever the correct status is knowable, for
+the same reason: "it failed somehow" is a much weaker claim than it looks.
 
 ## Phase 4 — Report and offer to run
 
-- Run `python/model_coverage_check.py` (or reason it through) to report which
-  models/endpoints got flows and which didn't. Report gaps **honestly** — a
-  silently skipped endpoint reads as covered when it isn't.
+- Run the coverage check — `python model_coverage_check.py` or
+  `go run ./cmd/modelcoverage` — to report which models/endpoints got flows and
+  which didn't. Report gaps **honestly**: a silently skipped endpoint reads as
+  covered when it isn't.
+- Confirm the flows are registered before claiming they exist. In Go this is
+  one command, `go run ./cmd/nocrud -l`, and it catches a flow file that
+  compiles but never registered itself.
 - Summarize what you generated and where.
-- Offer to run the flows (`python noCRUD.py -crud`, or `-f <flow>` for one, or
-  add `--serial` if the app is already running). Run only if the user says yes.
+- Offer to run the flows. Run only if the user says yes.
+
+  | | Everything | One flow | Against an app you started |
+  | --- | --- | --- | --- |
+  | Python | `python noCRUD.py -crud` | `-f <flow>` | add `--serial` |
+  | Go | `go run ./cmd/nocrud -crud` | `-f <flow>` | add `--serial` |
 
 ## Framework Adapter
 
@@ -116,17 +186,21 @@ Everything above is HTTP and framework-agnostic. Only these three concerns are
 per-framework. **This table is the source of truth for framework support — keep
 it honest as adapters are added.**
 
-| Concern         | Django/DRF (implemented)                                             | Other frameworks |
-| --------------- | ------------------------------------------------------------------- | ---------------- |
-| DB provisioning | psql; per-flow DB via migrate, or bitwise template copy (`-T`). See `utils/provisioning.py` | Not implemented — generate it (below) |
-| Start the app   | `manage.py runserver <port>` per flow (`provisioning.py`)           | Not implemented — generate it (below) |
-| Auth handshake  | `APIClient` login → session + CSRF token (`utils/api_client.py`)     | Edit `APIClient` for the project's auth |
+Both runners implement Django/DRF, in the same three places:
+
+| Concern         | Django/DRF (implemented)                                             | Python file              | Go file                              | Other frameworks |
+| --------------- | ------------------------------------------------------------------- | ------------------------ | ------------------------------------ | ---------------- |
+| DB provisioning | psql; per-flow DB via migrate, or bitwise template copy (`-T`)       | `utils/provisioning.py`  | `utils/provisioning/provisioning.go` | Not implemented — generate it (below) |
+| Start the app   | `manage.py runserver <port>` per flow                                | `utils/provisioning.py`  | `utils/provisioning/provisioning.go` | Not implemented — generate it (below) |
+| Auth handshake  | login → session + CSRF token                                         | `utils/api_client.py`    | `utils/apiclient/apiclient.go`       | Edit it for the project's auth |
 
 ### Generating an adapter for a new framework
 
 When the target backend isn't Django, **write the adapter** rather than telling
-the user it's unsupported. The runner interface you must satisfy is small and
-lives in `utils/provisioning.py`:
+the user it's unsupported. The interface is small, and the same shape in both
+runners — provision, clean up, authenticate.
+
+**Python** (`utils/provisioning.py`):
 
 - `provision_env_for_flow(flow_name) -> dict` — create an isolated DB, load the
   schema / run migrations, start the app on a free port (use `find_open_port()`
@@ -137,8 +211,20 @@ lives in `utils/provisioning.py`:
   DB can be inspected).
 - `APIClient` in `utils/api_client.py` — the auth handshake and request methods.
 
-Model the new adapter on the existing `provision_django_env_*` functions. What
-changes per framework:
+**Go** (`utils/provisioning/provisioning.go`) — same contract, typed:
+
+- `ProvisionEnvForFlow(ctx, flowName, out) (*nocrud.Env, error)` — same job,
+  returning an `*nocrud.Env` with `DBName`, `AppPort`, `DBConfig`, `Admin` and
+  `Proc` set. Use `FindOpenPort()` and `WaitForBackendToListen()`.
+- `CleanupEnv(ctx, env, out)` — stop `env.Proc` and drop `env.DBName` unless
+  `env.PersistDB` is set.
+- `Client.Login` in `utils/apiclient/apiclient.go` — the auth handshake.
+- Either replace those two functions, or leave them alone and pass your own as
+  `runners.Options{Provision: ..., Cleanup: ...}` — they're function fields, so
+  a new adapter needs no edit to the runner itself.
+
+Model the new adapter on the existing `provision_django_env_*` /
+`ProvisionDjangoEnv*` functions. What changes per framework:
 
 - **DB provisioning** — the app's own migration tool, not `manage.py`. E.g. Go
   backends use goose / golang-migrate / gorm auto-migrate; run that against the
@@ -159,8 +245,12 @@ Keep the Framework Adapter table above updated when you add one.
 
 ## Notes
 
-- The **Go** runner lags the Python one and has no scaffolding path yet; this
-  skill targets the Python runner. Bringing Go to parity is separate work.
-- Request timings are collected per request (via `@with_perf`). They print
-  inline, and with the `--perf` flag they are also persisted and compared
-  against a baseline for regression tracking — see `python/docs/PERF.md`.
+- Request timings are collected per request in both runners. They print inline,
+  and with the `--perf` flag they are also persisted and compared against a
+  baseline for regression tracking — see `python/docs/PERF.md`. The two write
+  the same schema and the same op names, so a baseline captured by one runner
+  can be compared by the other.
+- The runner flags are the same in both: `-f`/`--flows`, `-crud`,
+  `-req`/`--request_flows`, `-coll`/`--collected`, `-l`/`--list`,
+  `-s`/`--serial`, `--perf`. Invocation differs — `python noCRUD.py <flags>`
+  vs `go run ./cmd/nocrud <flags>`.

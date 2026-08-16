@@ -1,11 +1,12 @@
 ### Directory Structure
 
-| Directory         | Description / Status                                                                            |
-| ----------------- | ----------------------------------------------------------------------------------------------- |
-| `python/`         | Python Implementation - **Complete** (serial + parallel)                                         |
-| `go/`             | Go Implementation - **Complete, at parity with Python.** See [`go/Readme.md`](./go/Readme.md)    |
-| `example-app/`    | Example Application for running tests against                                                    |
-| `example-runner/` | This is what your runner will look like after you start building it out a bit.                   |
+| Directory                          | Description / Status                                                                         |
+| ---------------------------------- | -------------------------------------------------------------------------------------------- |
+| `python/`                          | Python Implementation - **Complete** (serial + parallel)                                      |
+| `go/`                              | Go Implementation - **Complete, at parity with Python.** See [`go/Readme.md`](./go/Readme.md) |
+| `examples/example_app/`            | Example application to run tests against. Also what CI dogfoods both runners on               |
+| `examples/example-runners/`        | Worked example flows, one set per implementation — `python-impl/` and `go-impl/`              |
+| `.claude/skills/nocrud-scaffold/`  | The skill that wires noCRUD into *your* project. **Start here** — see below                   |
 
 Both implementations do the same things — CRUD checks, multi-user request flows,
 per-flow isolated provisioning, parallel runs, persisted timings — and their perf
@@ -14,9 +15,19 @@ other. Pick by what your team writes; the flows read about the same in either.
 
 ### Using this Tool
 
-Unlike many libraries and frameworks out there, you are meant to copy the source code directly over to start. If you compare the python implementation with the example-runner, you will see that the example-runner has all the same files, it just also has the actual test files that point against the example app.
+**The short version: use the skill.** `nocrud-scaffold` reads your backend's
+routes and rules, asks which runner you want, writes the flows, and wires up
+config and auth against your app. That is the intended path now, and it replaces
+most of what follows.
 
-I recommend looking through the example-runner before you start building out your own runner to get an idea of some of the patterns possible.
+Everything below — and the whole `examples/` directory — predates the skill. It
+is how you did this by hand: copy the source over, read the example runner to see
+the patterns, adapt them yourself. Still accurate, still worth reading if you
+want to understand what the tool is doing rather than just use it, and still the
+reference for the parts the skill hands back to you (auth, provisioning for a
+non-Django backend). But you no longer have to start there.
+
+Unlike many libraries and frameworks out there, you are meant to copy the source code directly over to start. If you compare the python implementation with the example runner files, you will see they have all the same files, it just also has the actual test files that point against the example app.
 
 **See the readme inside the runner for the flags and examples.**
 
@@ -41,7 +52,7 @@ Since the implementation is still undergoing quite a few changes, I've decided t
 
 Open two terminals:
 
-- one for the example app `cd to noCRUD/example_app`
+- one for the example app `cd to noCRUD/examples/example_app`
 - one for the runner `cd to noCRUD/python`
 
 ### Setup and Start the example_app

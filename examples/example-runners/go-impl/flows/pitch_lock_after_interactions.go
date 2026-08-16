@@ -44,7 +44,7 @@ func pitchLockAfterInteractionsFlow(c *nocrud.Ctx) (any, error) {
 		return nil, err
 	}
 
-	comment, err := fixtures.GetByIndex("pitch_comments.json", 1)
+	comment, err := fixtures.GetByIndex("pitch_comments.json", 0)
 	if err != nil {
 		return nil, err
 	}
@@ -56,12 +56,19 @@ func pitchLockAfterInteractionsFlow(c *nocrud.Ctx) (any, error) {
 	// The pitch is locked now. The author owns it and is authenticated, and it
 	// still has to be refused.
 	//
+	// PATCH rather than PUT, and the difference matters more than it looks.
+	// PUT replaces the object, so a body of just pitch_text is rejected at
+	// validation for the fields it left out — the edit fails, but on a
+	// technicality, before the lock is ever consulted. The flow would pass
+	// against a backend with no locking at all. PATCH sends only the field
+	// being changed, so the refusal is the rule.
+	//
 	// Note this asserts *that* the edit fails, not which status it fails with:
 	// the backend raises a Django ValidationError from save(), which DRF
 	// doesn't translate, so it surfaces as a 500 rather than a 400. Worth
 	// knowing about — and exactly the sort of thing running the flow tells you.
 	err = nocrud.ExpectFail(c, "editing a locked pitch", func() error {
-		_, err := author.UpdateObjectByID("pitch", pitchID.ID(), map[string]any{
+		_, err := author.PatchObjectByID("pitch", pitchID.ID(), map[string]any{
 			"pitch_text": "trying to sneak in an edit",
 		})
 		return err

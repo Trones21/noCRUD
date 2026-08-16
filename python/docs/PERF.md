@@ -68,7 +68,7 @@ python perf_report.py --threshold 20   # non-zero exit fails the job on a regres
 There are two workflows in this repo:
 
 - **Consumer template** —
-  [`example-runner-files/ci/perf-regression.yml`](../../example-runner-files/ci/perf-regression.yml).
+  [`examples/example-runners/python-impl/ci/perf-regression.yml`](../../examples/example-runners/python-impl/ci/perf-regression.yml).
   Copy it into **your** project's `.github/workflows/` (the repo where you cloned
   noCRUD next to your app). Perf steps are wired; backend bring-up is marked
   `ADAPT`. It does not run in the noCRUD repo itself.

@@ -1,12 +1,36 @@
 sandbox
 
+# Example flows copied in for a trial run.
+#
+# Both runners ship flows/ empty on purpose — flows are yours. Trying the
+# examples means copying them in from examples/example-runners/ (CI does exactly
+# this, which is what keeps them compiling against the current runner), and
+# without these lines every trial run leaves the tree full of untracked files
+# that are really just a copy of something already committed elsewhere.
+#
+# Note for anyone using this repo *as* their runner rather than copying it out:
+# your own Go flows would land here too. Either track them with `git add -f`, or
+# work outside the repo, which is what the Readmes now recommend.
+/go/flows/*.go
+!/go/flows/flows.go
+/python/flows/auto_registered/
+
 # noCRUD perf: run artifacts are transient; the baseline is committed
 python/perf/runs/
 go/perf/runs/
 
-# Compiled runner binaries
-go/nocrud
-go/perfreport
-go/createcrudflow
-go/modelcoverage
-go/initdb
+# Compiled runner binaries. `go build ./cmd/<x>` drops the binary in the working
+# directory under the command's own name.
+#
+# A gitignore pattern cannot say "the file, not the directory", and go/nocrud is
+# both — the binary AND the core package. Without the negation below, the
+# package source is silently never staged and the runner does not build from a
+# clean checkout. The other four are only ever binaries (their sources live in
+# go/cmd/), and these patterns are anchored to the repo root, so go/cmd/nocrud
+# is unaffected either way.
+/go/nocrud
+!/go/nocrud/
+/go/perfreport
+/go/createcrudflow
+/go/modelcoverage
+/go/initdb
