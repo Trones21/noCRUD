@@ -4,9 +4,9 @@
 # it needs nothing but Go. A postgres service is provided so the dbclient tests
 # run for real rather than skipping themselves.
 #
-# The example flows live in example-runner-files/ to keep go/flows/ clean, the
-# same way the Python workflow handles them — so they get copied in here, which
-# also proves they still compile against the runner.
+# The example flows live in examples/example-runners/go-impl/ to keep go/flows/
+# clean, the same way the Python workflow handles them — so they get copied in
+# here, which also proves they still compile against the runner.
 
 name: go-runner
 
@@ -53,7 +53,7 @@ jobs:
           cache-dependency-path: go/go.sum
 
       - name: Copy in the example flows
-        run: cp ../example-runner-files/go/flows/*.go ./flows/
+        run: cp ../examples/example-runners/go-impl/flows/*.go ./flows/
 
       - name: Build
         run: go build ./...

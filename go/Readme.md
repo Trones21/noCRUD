@@ -15,7 +15,7 @@ The example app is Django, so its dependencies come first:
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -r ../example_app/requirements.txt
+pip install -r ../examples/example_app/requirements.txt
 ```
 
 Point the runner at a postgres it can create databases in, and give Django its
@@ -29,7 +29,7 @@ export DJANGO_KEY=dev-insecure-key
 The example flows live outside the runner so `flows/` stays yours. Copy them in:
 
 ```bash
-cp ../example-runner-files/go/flows/*.go ./flows/
+cp ../examples/example-runners/go-impl/flows/*.go ./flows/
 go run ./cmd/nocrud -l          # confirm they registered
 go run ./cmd/nocrud -coll       # run every one of them
 ```

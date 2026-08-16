@@ -34,8 +34,12 @@ func AppDir() string {
 	if dir := os.Getenv(EnvAppDir); dir != "" {
 		return dir
 	}
-	// Default mirrors python/config.py: the app sits next to the runner.
-	return filepath.Join(filepath.Dir(RunnerDir()), "example_app")
+	// Default mirrors python/config.py: the bundled example app. In your own
+	// project this is wherever your backend lives — set NOCRUD_APP_DIR.
+	//
+	// The directory keeps its underscore because the Django package inside it
+	// is example_app, and SettingsPath derives that inner name from this one.
+	return filepath.Join(filepath.Dir(RunnerDir()), "examples", "example_app")
 }
 
 // FixturesPath is the directory holding the app's fixture json files.

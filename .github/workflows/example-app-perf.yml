@@ -1,6 +1,6 @@
 # Live CI: run noCRUD against the bundled example_app and collect timings.
 #
-# Unlike example-runner-files/ci/perf-regression.yml (a template for consumers),
+# Unlike examples/example-runners/python-impl/ci/perf-regression.yml (a template),
 # THIS workflow belongs in the noCRUD repo: example_app is a real backend, so
 # noCRUD can dogfood itself here. It doubles as an end-to-end demo of the perf
 # feature. The recipe below was verified end to end (Python 3.11 + Django 4.2).
@@ -63,16 +63,16 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r example_app/requirements.txt
+          pip install -r examples/example_app/requirements.txt
           pip install -r python/requirements.txt
 
       - name: Register example flows
         # The runner (python/) is kept clean; the example flows live in
-        # example-runner-files/ and are auto-registered here at run time.
+        # examples/example-runners/python-impl/ and are auto-registered here at run time.
         run: |
           mkdir -p python/flows/auto_registered
           touch python/flows/auto_registered/__init__.py
-          cp example-runner-files/auto_registered/*.py python/flows/auto_registered/
+          cp examples/example-runners/python-impl/auto_registered/*.py python/flows/auto_registered/
 
       - name: Run flows with perf collection
         # Parallel mode (default): each flow provisions its own app + DB.

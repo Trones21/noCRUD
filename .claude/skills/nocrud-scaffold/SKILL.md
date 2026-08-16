@@ -36,7 +36,7 @@ dependencies / rules, and write the flows yourself.
   working adapter today** (see the table below). For anything else, tell the
   user what's missing before proceeding — you can still generate flows, but the
   DB-provisioning and app-startup pieces will need to be written.
-- Read `USAGE.md` and `example-runner-files/Readme.md` in the noCRUD repo for
+- Read `USAGE.md` and `examples/example-runners/Readme.md` in the noCRUD repo for
   the runner's conventions before generating anything.
 - **Do not auto-run the flows.** Generate, report, and *offer* to run them. Only
   run if the user asks.
@@ -130,11 +130,11 @@ sensible update field/value from the schema; don't ask.
 | Entry point  | `crud_exec(endpoint, api, create, update_details)`                  | `crud.Exec(c, api, endpoint, create, crud.UpdateDetails{...})`         |
 | No-dep create| `simple_create`                                                     | `crud.SimpleCreate(endpoint, fixture, index, "id")`                    |
 | Setup        | `setup()` from `utils/common.py`                                    | `c.Setup()`                                                            |
-| Registration | Add to `CRUD_FLOWS` in `noCRUD.py`, or auto-register (see `example-runner-files/auto_registered/`) | `func init() { nocrud.RegisterCRUD("<model>", crud<Model>Flow) }` — automatic, no central list |
+| Registration | Add to `CRUD_FLOWS` in `noCRUD.py`, or auto-register (see `examples/example-runners/python-impl/auto_registered/`) | `func init() { nocrud.RegisterCRUD("<model>", crud<Model>Flow) }` — automatic, no central list |
 
-Working examples of every one of these live in `example-runner-files/` —
-`crud/` and `auto_registered/` for Python, `go/flows/` for Go. Read the ones
-matching the chosen runner before writing your own.
+Working examples of every one of these live in `examples/example-runners/` —
+`python-impl/` and `go-impl/`. Read the ones matching the chosen runner before
+writing your own.
 
 For the rules inventory, generate **business-logic flows**: multi-endpoint,
 often multi-user sequences that assert a rule and its expected failures — e.g.

@@ -82,7 +82,7 @@ jobs:
       # ADAPT: get to a runnable runner. This means (a) your backend can migrate
       # and start, and (b) your flows are registered (CRUD_FLOWS / REQUEST_FLOWS
       # in noCRUD.py, or auto_registered/). For the example app that is roughly:
-      #   cp ../example-runner-files/crud/* flows/crud/   # then register them
+      #   cp ../examples/example-runners/python-impl/crud/* flows/crud/   # then register them
       #   (cd ../example_app && python manage.py migrate)
       - name: Prepare runner
         run: |

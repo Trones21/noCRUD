@@ -1,6 +1,6 @@
-## Setting up the Example Runner
+# Example flows — Python runner
 
-The `example-runner-files/` directory contains example flows you can copy into your runner implementation.
+Flows that run against the bundled `example_app`, for the `python/` runner.
 
 > ⚠️ **IMPORTANT:**
 > These example files are designed to break if used directly.
@@ -16,7 +16,7 @@ To load the CRUD example flows, copy them into your flow directory:
 All commands assume your `pwd` is the noCRUD project root
 
 ```bash
-cp ./example-runner-files/crud/* ./python/flows/crud/
+cp ./examples/example-runners/python-impl/crud/* ./python/flows/crud/
 ```
 
 This places the flow files into `./python/flows/crud/`, where the runner expects to find CRUD definitions.
@@ -28,7 +28,7 @@ This places the flow files into `./python/flows/crud/`, where the runner expects
 Set Envrionment variables
 
 ```bash
-source ./example_app/backend_env.sh
+source ./examples/example_app/backend_env.sh
 ```
 
 `config.py` is already pre-configured to match the example app structure.
@@ -139,7 +139,7 @@ In this mode, you **must** start `example_app` yourself in a separate terminal.
 Make sure **both terminals** have the correct environment variables loaded:
 
 ```bash
-source <path>/example_app/backend_env.sh
+source <path>/examples/example_app/backend_env.sh
 ```
 
 ```bash

@@ -37,12 +37,12 @@ regressions. See `python/docs/PERF.md` for usage.
       threshold and exiting non-zero (CI gate). `--set-baseline` promotes a run.
 - [x] Percentiles (p95/p99) alongside mean; `perf_report.py --metric` gates on
       the chosen metric.
-- [x] Consumer CI template — `example-runner-files/ci/perf-regression.yml`, which
+- [x] Consumer CI template — `examples/example-runners/python-impl/ci/perf-regression.yml`, which
       the consuming repo copies into its own `.github/workflows/` (run flows
       `--perf`, fail on regression, upload the run dir as an artifact).
 - [x] Live dogfood CI — `.github/workflows/example-app-perf.yml` runs noCRUD
       against the bundled example_app on every PR (verified end to end on
-      Python 3.11 + Django 4.2; pinned in `example_app/requirements.txt` and
+      Python 3.11 + Django 4.2; pinned in `examples/example_app/requirements.txt` and
       `python/requirements.txt`). Runs baseline-less (green, non-flaky); commit a
       CI-captured baseline to turn it into a real gate.
 
