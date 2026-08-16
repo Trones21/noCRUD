@@ -1,5 +1,20 @@
 sandbox
 
+# Example flows copied in for a trial run.
+#
+# Both runners ship flows/ empty on purpose — flows are yours. Trying the
+# examples means copying them in from examples/example-runners/ (CI does exactly
+# this, which is what keeps them compiling against the current runner), and
+# without these lines every trial run leaves the tree full of untracked files
+# that are really just a copy of something already committed elsewhere.
+#
+# Note for anyone using this repo *as* their runner rather than copying it out:
+# your own Go flows would land here too. Either track them with `git add -f`, or
+# work outside the repo, which is what the Readmes now recommend.
+/go/flows/*.go
+!/go/flows/flows.go
+/python/flows/auto_registered/
+
 # noCRUD perf: run artifacts are transient; the baseline is committed
 python/perf/runs/
 go/perf/runs/
