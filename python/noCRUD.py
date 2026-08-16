@@ -7,6 +7,7 @@ from utils.db_client import DBClient
 from utils.printing import print_group_separator
 from utils.collector import collect_flows_by_folder
 from utils import perf
+from utils import results
 ##### Import Manually Registered Flows
 
 ### Manually Registered
@@ -38,6 +39,12 @@ def main():
         "--perf",
         action="store_true",
         help="Persist request timings for this run and compare against the baseline",
+    )
+    parser.add_argument(
+        "-json",
+        "--json",
+        metavar="PATH",
+        help="Also write machine-readable results to this path",
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
@@ -106,6 +113,8 @@ def main():
         print(f"⏱  Perf collection on — run id {run_id}")
 
     start_time = time.perf_counter()
+    started_at = results.now_iso()
+    flow_records = []
 
     is_parallel = True
     if args.serial:
@@ -124,29 +133,50 @@ def main():
         flows_to_run = REQUEST_FLOWS.keys()
         print(f"Flows to run: {flows_to_run}")
         flows = [(name, allFlows[name]) for name in flows_to_run]
-        request_flows_runners(flows, parallel=is_parallel)
+        flow_records += request_flows_runners(flows, parallel=is_parallel)
 
     if args.crud:
         flows_to_run = CRUD_FLOWS.keys()
         print(f"Flows to run: {flows_to_run}")
         flows = [(name, allFlows[name]) for name in flows_to_run]
-        crud_flows_runners(flows, parallel=is_parallel)
+        flow_records += crud_flows_runners(flows, parallel=is_parallel)
 
     if args.collected:
         flows_to_run = collectedFlows.keys()
         print(f"Flows to run: {flows_to_run}")
         flows = [(name, allFlows[name]) for name in flows_to_run]
-        request_flows_runners(flows, parallel=is_parallel)
+        flow_records += request_flows_runners(
+            flows, parallel=is_parallel, kind="collected"
+        )
 
     if args.flows:
         flows_to_run = args.flows  # Add explicitly specified flows
         print(f"Flows to run: {flows_to_run}")
         flows = [(name, allFlows[name]) for name in flows_to_run]
-        request_flows_runners(flows, parallel=is_parallel)
+        flow_records += request_flows_runners(
+            flows, parallel=is_parallel, kind="selected"
+        )
 
     end_time = time.perf_counter()
     print("=" * 80)
     print(f"\nTest runner took: {end_time - start_time:.6f} seconds")
+
+    # A failure to write results must not change the run's verdict — the flows
+    # already told us what we came to find out.
+    if args.json:
+        try:
+            results.write(
+                args.json,
+                results.build(
+                    flow_records,
+                    wall_ms=(end_time - start_time) * 1000,
+                    mode="serial" if args.serial else "parallel",
+                    started_at=started_at,
+                ),
+            )
+            print(f"Results written to {args.json}")
+        except Exception as e:
+            print(f"Could not write results: {e}")
 
     if args.perf and perf_run_dir is not None:
         from perf_report import compare_and_print

@@ -89,6 +89,7 @@ go run ./cmd/initdb          # create and migrate a database
 | `-j`, `--jobs`              | Max flows at once in parallel mode (default GOMAXPROCS)     |
 | `--perf`                    | Persist timings and compare against the baseline            |
 | `--threshold`, `--metric`   | Regression gate: percent, and `mean` / `p95` / `p99`        |
+| `--json <path>`             | Also write machine-readable results (see below)             |
 
 One of `-f`, `-crud`, `-req`, `-coll` or `-l` is required — there is no default
 that runs something you didn't ask for.
@@ -97,6 +98,33 @@ that runs something you didn't ask for.
 runner. Flows are goroutines here, so the runner itself is nearly free; each
 concurrent flow is another app process and another database, and that is what a
 small box runs out of.
+
+### Machine-readable results
+
+`--json <path>` writes what the run did, in a schema shared with the Python
+runner (`nocrud.results/v1`):
+
+```json
+{
+  "schema": "nocrud.results/v1",
+  "runner": "go", "mode": "parallel", "jobs": 12,
+  "wall_ms": 4021.5, "passed": true,
+  "flows": [
+    { "name": "actor", "kind": "crud", "ok": true, "ms": 1249.4,
+      "summary": "C:✔ R:✔ U:✔ D:✔" }
+  ]
+}
+```
+
+Useful for a CI step that wants to key off a specific flow rather than parse
+terminal output. `ok` reflects whether the flow *raised* — a CRUD flow reporting
+`U:✘` did not raise, so it stays `ok: true` with the tick visible in `summary`.
+
+**This file is local and is not anonymized.** Flow names are usually your
+endpoint names, and endpoint names are usually your domain model. If you want to
+share run data with the project, use the `nocrud-share-results` skill, which
+builds a separate payload from a field allowlist and shows it to you first —
+don't upload this file or a `perf/runs/*.ndjson`.
 
 ## Writing a flow
 

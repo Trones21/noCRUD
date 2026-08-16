@@ -101,6 +101,9 @@ type Result struct {
 	Value     any
 	Formatted string
 	Err       error
+	// Duration is how long the flow itself took — not counting provisioning,
+	// which is the environment's cost rather than the flow's.
+	Duration time.Duration
 	// Output is the flow's captured log, in parallel mode. Empty in serial
 	// mode, where it went straight to the terminal.
 	Output string
@@ -219,6 +222,11 @@ func runIsolatedFlow(ctx context.Context, flow nocrud.Flow, opts Options) Result
 // than a crash.
 func execFlow(ctx context.Context, flow nocrud.Flow, env *nocrud.Env, out io.Writer, run *perf.Run) (result Result) {
 	result = Result{Flow: flow}
+
+	// Registered first, so it runs last — after the recover below has turned a
+	// panic into a result. A flow that panicked still took time worth recording.
+	start := time.Now()
+	defer func() { result.Duration = time.Since(start) }()
 
 	collector := run.Collector(flow.Name)
 	defer func() {

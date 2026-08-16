@@ -17,7 +17,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -28,6 +30,7 @@ import (
 	"github.com/Trones21/noCRUD/go/utils/dbclient"
 	"github.com/Trones21/noCRUD/go/utils/perf"
 	"github.com/Trones21/noCRUD/go/utils/printing"
+	"github.com/Trones21/noCRUD/go/utils/results"
 
 	// Registers the flows. Every file in this package that calls
 	// nocrud.Register in its init() shows up here — the Go equivalent of the
@@ -46,6 +49,7 @@ type options struct {
 	list     bool
 	metric   string
 	threshld float64
+	jsonPath string
 }
 
 func main() {
@@ -86,6 +90,7 @@ func run() int {
 	}
 
 	start := time.Now()
+	startedAt := start.UTC().Format(time.RFC3339)
 
 	parallel := !opts.serial
 	if opts.serial {
@@ -111,7 +116,18 @@ func run() int {
 	passed := runners.PrintSummary(os.Stdout, results)
 
 	printing.Rule(os.Stdout, 80)
-	fmt.Printf("\nTest runner took: %.6f seconds\n", time.Since(start).Seconds())
+	elapsed := time.Since(start)
+	fmt.Printf("\nTest runner took: %.6f seconds\n", elapsed.Seconds())
+
+	// A failure to write results must not change the run's verdict — the flows
+	// already told us what we came to find out.
+	if opts.jsonPath != "" {
+		if err := writeResults(opts, results, passed, startedAt, elapsed); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		} else {
+			fmt.Printf("Results written to %s\n", opts.jsonPath)
+		}
+	}
 
 	if run != nil {
 		printing.GroupSeparator(os.Stdout, "Timings")
@@ -126,6 +142,61 @@ func run() int {
 		return 1
 	}
 	return 0
+}
+
+// writeResults records what the run did, for anything that isn't a human
+// reading the terminal.
+//
+// Note this file keeps flow names: it is local, and the names are most of what
+// makes it useful. The share skill builds its own payload from an allowlist
+// rather than uploading this.
+func writeResults(opts options, rs []runners.Result, passed bool, startedAt string, elapsed time.Duration) error {
+	file := results.File{
+		Runner:    "go",
+		RunnerSHA: runnerSHA(),
+		StartedAt: startedAt,
+		WallMS:    float64(elapsed.Nanoseconds()) / 1e6,
+		Mode:      "parallel",
+		Jobs:      opts.jobs,
+		Passed:    passed,
+	}
+	if opts.serial {
+		file.Mode = "serial"
+		file.Jobs = 0
+	} else if file.Jobs == 0 {
+		// Record the concurrency actually used, not the unset flag — the
+		// runner defaults to GOMAXPROCS, and "how parallel was this" is the
+		// interesting number.
+		file.Jobs = runtime.GOMAXPROCS(0)
+	}
+
+	for _, r := range rs {
+		flow := results.Flow{
+			Name:    r.Flow.Name,
+			Kind:    string(r.Flow.Kind),
+			OK:      !r.Failed(),
+			MS:      float64(r.Duration.Nanoseconds()) / 1e6,
+			Summary: results.StripANSI(r.Formatted),
+		}
+		if r.Err != nil {
+			flow.Error = r.Err.Error()
+		}
+		file.Flows = append(file.Flows, flow)
+	}
+
+	return results.Write(opts.jsonPath, file)
+}
+
+// runnerSHA is noCRUD's own commit, for telling which version of the runner
+// produced a result. Not the app-under-test's.
+func runnerSHA() string {
+	cmd := exec.Command("git", "rev-parse", "--short", "HEAD")
+	cmd.Dir = config.RunnerDir()
+	out, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
 }
 
 // selectFlows resolves the mutually exclusive selection flags into the flows to
@@ -235,6 +306,7 @@ func parseFlags() options {
 	flag.IntVar(&opts.jobs, "jobs", 0, "Max flows running at once in parallel mode (default: GOMAXPROCS)")
 	flag.Float64Var(&opts.threshld, "threshold", 20, "Perf regression threshold, in percent")
 	flag.StringVar(&opts.metric, "metric", "mean", "Perf metric to compare: mean, p95 or p99")
+	flag.StringVar(&opts.jsonPath, "json", "", "Also write machine-readable results to this path")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Run backend user flow simulations.\n\nUsage:\n  %s [flags]\n\nFlags:\n", os.Args[0])
